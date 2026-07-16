@@ -1,0 +1,404 @@
+{
+  "verses": [
+    {
+      "id": 1,
+      "chapter": 29,
+      "verse": 11,
+      "text": "For I know the plans I have for you, declares the Lord, plans for welfare and not for evil, to give you a future and a hope.",
+      "reflection": "In times of uncertainty, remember that God's plans are intentional and rooted in hope. Even when we can't see the path ahead, we can trust in divine wisdom that works toward our good.",
+      "wellnessTip": "Take 5 minutes to journal about one hope you're holding onto, even if circumstances feel uncertain.",
+      "tags": ["hope", "trust", "future", "plans"],
+      "date": "2026-01-01"
+    },
+    {
+      "id": 2,
+      "chapter": 31,
+      "verse": 3,
+      "text": "The Lord appeared to us in the past, saying: 'I have loved you with an everlasting love; I have drawn you with unfailing kindness.'",
+      "reflection": "God's love is not conditional on our performance. It is constant, ancient, and unwavering. This is the foundation upon which we build our lives and find peace.",
+      "wellnessTip": "Acknowledge one way you felt loved today—by God, by others, or through a moment of grace.",
+      "tags": ["love", "grace", "kindness", "acceptance"],
+      "date": "2026-01-02"
+    },
+    {
+      "id": 3,
+      "chapter": 17,
+      "verse": 7,
+      "text": "But blessed is the one who trusts in the Lord, whose confidence is in him.",
+      "reflection": "Trust is an active choice, not a passive feeling. Each day we decide anew to place our confidence in something greater than our fears or circumstances.",
+      "wellnessTip": "Identify one area where you're struggling to trust. Spend time in prayer releasing it to God.",
+      "tags": ["trust", "confidence", "faith", "blessing"],
+      "date": "2026-01-03"
+    },
+    {
+      "id": 4,
+      "chapter": 33,
+      "verse": 3,
+      "text": "Call to me and I will answer you and tell you great and unsearchable things you do not know.",
+      "reflection": "God invites us into dialogue. Prayer is not a monologue of requests but a conversation where we discover truths about ourselves and the divine.",
+      "wellnessTip": "Write a genuine prayer today—bring your real questions and doubts, not just your thanks.",
+      "tags": ["prayer", "calling", "discovery", "dialogue"],
+      "date": "2026-01-04"
+    },
+    {
+      "id": 5,
+      "chapter": 31,
+      "verse": 25,
+      "text": "I will refresh the weary and satisfy the faint.",
+      "reflection": "Exhaustion is real, and God acknowledges it. Renewal comes not from pushing harder but from surrendering to divine restoration.",
+      "wellnessTip": "Do one thing today that genuinely restores you—rest, a walk, or time with loved ones.",
+      "tags": ["rest", "restoration", "weariness", "renewal"],
+      "date": "2026-01-05"
+    },
+    {
+      "id": 6,
+      "chapter": 15,
+      "verse": 16,
+      "text": "When your words came, I ate them; they were my joy and my heart's delight, for I bear your name, O Lord God Almighty.",
+      "reflection": "God's word nourishes us at the deepest level. When we consume Scripture with openness and hunger, it becomes sustenance that transforms our inner landscape.",
+      "wellnessTip": "Read one verse slowly today. Let it sit with you, becoming part of your thoughts and heart.",
+      "tags": ["word", "nourishment", "joy", "identity"],
+      "date": "2026-01-06"
+    },
+    {
+      "id": 7,
+      "chapter": 32,
+      "verse": 27,
+      "text": "I am the Lord, the God of all mankind. Is anything too hard for me?",
+      "reflection": "God's power is not limited by our circumstances. When we feel trapped or hopeless, we're invited to remember that the creator of all things is present and able.",
+      "wellnessTip": "List three impossibilities you're facing. Now meditate on one: 'Nothing is too hard for the Lord.'",
+      "tags": ["power", "impossible", "God's ability", "perspective"],
+      "date": "2026-01-07"
+    },
+    {
+      "id": 8,
+      "chapter": 24,
+      "verse": 7,
+      "text": "I will give them a heart to know me, that I am the Lord. They will be my people, and I will be their God, for they will return to me with all their heart.",
+      "reflection": "Knowing God is more than intellectual understanding—it's a transformation of the heart. God seeks genuine connection with us, and offers us the capacity to return that affection.",
+      "wellnessTip": "Spend 10 minutes in quiet reflection, asking: 'How have I experienced God's presence in my life?'",
+      "tags": ["knowing God", "heart", "relationship", "return"],
+      "date": "2026-01-08"
+    },
+    {
+      "id": 9,
+      "chapter": 31,
+      "verse": 34,
+      "text": "No longer will they teach their neighbor, or say to one another, 'Know the Lord,' because they will all know me, from the least of them to the greatest, declares the Lord.",
+      "reflection": "A vision of intimacy where knowledge of God becomes universal and immediate. This speaks to the ultimate dignity each person holds—direct access to divine presence.",
+      "wellnessTip": "Consider how you might share your own experience of God's presence with someone today—not through preaching, but through authenticity.",
+      "tags": ["knowledge", "intimacy", "universality", "presence"],
+      "date": "2026-01-09"
+    },
+    {
+      "id": 10,
+      "chapter": 20,
+      "verse": 11,
+      "text": "But the Lord is with me like a mighty warrior; so my persecutors will stumble and not prevail.",
+      "reflection": "In the midst of opposition, we're reminded that we're not alone. God's protective presence transforms us into something stronger than we could be alone.",
+      "wellnessTip": "Identify one 'enemy' (challenge, person, or pattern) you face. Visualize God as a mighty warrior standing with you.",
+      "tags": ["protection", "strength", "opposition", "warrior"],
+      "date": "2026-01-10"
+    },
+    {
+      "id": 11,
+      "chapter": 23,
+      "verse": 5,
+      "text": "The days are coming,' declares the Lord, 'when I will raise up for David a righteous Branch, a King who will reign wisely.'",
+      "reflection": "Hope is woven into history. Even in exile and darkness, Jeremiah proclaims a future redemption. Our circumstances are not the final word.",
+      "wellnessTip": "Write about a future hope you're believing for. Don't worry if it seems distant—faith holds space for it.",
+      "tags": ["hope", "future", "redemption", "kingship"],
+      "date": "2026-01-11"
+    },
+    {
+      "id": 12,
+      "chapter": 1,
+      "verse": 5,
+      "text": "Before I formed you in the womb I knew you, before you were born I set you apart; I appointed you as a prophet to the nations.",
+      "reflection": "Your existence is not accident or afterthought. God knew and chose you before you drew your first breath. This is the ground of your worth.",
+      "wellnessTip": "Sit with this: 'Before I was born, God knew me.' What does that mean for how you see yourself?",
+      "tags": ["identity", "purpose", "worth", "calling"],
+      "date": "2026-01-12"
+    },
+    {
+      "id": 13,
+      "chapter": 3,
+      "verse": 22,
+      "text": "Return, faithless people,' declares the Lord, 'for I am your husband. I will choose you—one from a town and two from a clan—and bring you to Zion.'",
+      "reflection": "God doesn't give up on us. The invitation to return is always open. No matter how far we've strayed, we're pursued by a love that won't let us go.",
+      "wellnessTip": "If you've drifted from your faith or from yourself, consider: What would returning look like? What's one small step?",
+      "tags": ["return", "grace", "faithfulness", "marriage"],
+      "date": "2026-01-13"
+    },
+    {
+      "id": 14,
+      "chapter": 30,
+      "verse": 17,
+      "text": "But I will restore you to health and heal your wounds,' declares the Lord, 'because you are called an outcast, Zion for whom no one cares.'",
+      "reflection": "God notices the forgotten, the marginalized, the broken. Healing comes to those society has written off. Your restoration is important to God.",
+      "wellnessTip": "If you feel like an outcast, acknowledge that today. Then rest in the truth that God sees and cares for you.",
+      "tags": ["healing", "restoration", "outcast", "care"],
+      "date": "2026-01-14"
+    },
+    {
+      "id": 15,
+      "chapter": 2,
+      "verse": 13,
+      "text": "My people have committed two sins: They have forsaken me, the spring of living water, and have dug their own cisterns, broken cisterns that cannot hold water.",
+      "reflection": "Sometimes we exhaust ourselves pursuing what cannot fulfill us. The invitation is always back to the source—the living water that actually satisfies.",
+      "wellnessTip": "What 'broken cistern' are you drinking from? What would it take to return to living water?",
+      "tags": ["sin", "satisfaction", "source", "choice"],
+      "date": "2026-01-15"
+    },
+    {
+      "id": 16,
+      "chapter": 9,
+      "verse": 23,
+      "text": "This is what the Lord says: 'Let not the wise boast of their wisdom or the strong boast of their strength or the rich boast of their riches.'",
+      "reflection": "Our accomplishments and abilities are gifts, not grounds for pride. True boasting comes from knowing God and living justly.",
+      "wellnessTip": "Consider what you're proud of. Is it your doing, or has God been at work? Reframe it as gratitude.",
+      "tags": ["pride", "wisdom", "strength", "humility"],
+      "date": "2026-01-16"
+    },
+    {
+      "id": 17,
+      "chapter": 31,
+      "verse": 16,
+      "text": "This is what the Lord says: 'Restrain your voice from weeping and your eyes from tears, for your work will be rewarded,' declares the Lord.",
+      "reflection": "Grief is real, but it is not the end. God sees the tears shed in suffering and promises that our faithfulness will be honored.",
+      "wellnessTip": "If you're grieving, let yourself cry. And then, however small, acknowledge one thing you're still working toward.",
+      "tags": ["grief", "tears", "reward", "work"],
+      "date": "2026-01-17"
+    },
+    {
+      "id": 18,
+      "chapter": 5,
+      "verse": 22,
+      "text": "Should you not fear me?' declares the Lord. 'Should you not tremble at my presence? I made the sand a boundary for the sea, an everlasting barrier it cannot cross.'",
+      "reflection": "There is order in creation. God's power and wisdom established boundaries that hold. We can rest in the stability that comes from a God who knows what He's doing.",
+      "wellnessTip": "Walk outside and notice one boundary in nature—a shoreline, a mountain, a tree's roots. What does it teach you about order?",
+      "tags": ["fear", "order", "creation", "stability"],
+      "date": "2026-01-18"
+    },
+    {
+      "id": 19,
+      "chapter": 8,
+      "verse": 22,
+      "text": "Is there no balm in Gilead? Is there no physician there? Why then is there no healing for the wound of my people?",
+      "reflection": "Jeremiah names the pain that others want to hide. Healing requires first acknowledging the wound. Your suffering is seen and matters.",
+      "wellnessTip": "Name one wound in your life that you've been denying. What would healing look like?",
+      "tags": ["healing", "pain", "physician", "Gilead"],
+      "date": "2026-01-19"
+    },
+    {
+      "id": 20,
+      "chapter": 17,
+      "verse": 10,
+      "text": "I the Lord search the heart and examine the mind, to reward each person according to their conduct, according to what their deeds deserve.",
+      "reflection": "God sees beyond appearances to our inner motivations. This can be convicting, but it's also deeply comforting—you can't hide from God's justice, but also from His mercy.",
+      "wellnessTip": "Reflect honestly: What does God see when He looks at your heart today? Where do you need to adjust course?",
+      "tags": ["heart", "justice", "deeds", "integrity"],
+      "date": "2026-01-20"
+    },
+    {
+      "id": 21,
+      "chapter": 7,
+      "verse": 11,
+      "text": "Has this house, which bears my Name, become a den of robbers to you? But I have been watching!' declares the Lord.",
+      "reflection": "God's presence with us means He is always aware. We cannot fool Him or hide our true motives. This calls us to integrity in all spaces.",
+      "wellnessTip": "Is there an area of your life where you're acting differently when God is 'watching' vs. when you think no one is?",
+      "tags": ["watchfulness", "robbers", "integrity", "presence"],
+      "date": "2026-01-21"
+    },
+    {
+      "id": 22,
+      "chapter": 26,
+      "verse": 13,
+      "text": "Now reform your ways and your actions, and obey the Lord your God. Then the Lord will relent and not bring the disaster he has threatened against you.",
+      "reflection": "Repentance is powerful. It's not about shame but about change—and change stops the trajectory of judgment. There is always time to turn around.",
+      "wellnessTip": "Is there a pattern in your life you know needs changing? Take one small action today toward reformation.",
+      "tags": ["repentance", "reform", "obedience", "change"],
+      "date": "2026-01-22"
+    },
+    {
+      "id": 23,
+      "chapter": 4,
+      "verse": 27,
+      "text": "The whole land will be ruined, though I will not destroy it completely.",
+      "reflection": "Even judgment carries mercy. Even in the darkest scenarios, there is a reserved remnant, a core that God preserves. Destruction is never total.",
+      "wellnessTip": "When facing a difficult situation, ask: Where is God preserving something in the midst of this?",
+      "tags": ["judgment", "mercy", "remnant", "preservation"],
+      "date": "2026-01-23"
+    },
+    {
+      "id": 24,
+      "chapter": 6,
+      "verse": 16,
+      "text": "This is what the Lord says: 'Stand at the crossroads and look; ask for the ancient paths, ask where the good way is, and walk in it, and you will find rest for your souls.'",
+      "reflection": "Wisdom often lies not in novelty but in returning to what has been tested and proven true. Ancient paths aren't antiquated—they're grounded in timeless truth.",
+      "wellnessTip": "What ancient practice—prayer, fasting, time in nature, community—might you return to for rest?",
+      "tags": ["paths", "wisdom", "rest", "ancient"],
+      "date": "2026-01-24"
+    },
+    {
+      "id": 25,
+      "chapter": 10,
+      "verse": 12,
+      "text": "But God made the earth by his power; he founded the world by his wisdom and stretched out the heavens by his understanding.",
+      "reflection": "The vastness of creation speaks to God's power. And yet this powerful God cares about you personally. You are both insignificant and infinitely valued.",
+      "wellnessTip": "Spend time contemplating the night sky or a vast landscape. What does the bigness of creation tell you about God and your place in it?",
+      "tags": ["creation", "power", "wisdom", "vastness"],
+      "date": "2026-01-25"
+    },
+    {
+      "id": 26,
+      "chapter": 11,
+      "verse": 20,
+      "text": "O Lord Almighty, you who judge righteously and test the heart and mind, let me see your vengeance on them, for to you I have committed my cause.",
+      "reflection": "Trusting God means releasing our need for revenge. Vengeance belongs to God; our job is to commit our cause to Him and trust His justice.",
+      "wellnessTip": "Is there someone you've been wanting to 'get even' with? Practice releasing that to God's judgment.",
+      "tags": ["vengeance", "justice", "trust", "cause"],
+      "date": "2026-01-26"
+    },
+    {
+      "id": 27,
+      "chapter": 12,
+      "verse": 5,
+      "text": "If you have raced with men on foot and they have worn you out, how can you compete with horses? If you stumble in safe country, how will you manage in the thickets of the Jordan?",
+      "reflection": "God's question to Jeremiah—and to us—is: Are you ready for what's coming? Spiritual growth requires us to expand our capacity, not stay in comfort.",
+      "wellnessTip": "Where are you being called to grow beyond your current limits? What small stretch could you take today?",
+      "tags": ["growth", "challenge", "capacity", "readiness"],
+      "date": "2026-01-27"
+    },
+    {
+      "id": 28,
+      "chapter": 13,
+      "verse": 27,
+      "text": "I have seen your adulteries and lustings, your shameless prostitution! On the hills and in the fields I have seen your detestable acts.",
+      "reflection": "Nothing is hidden from God. This can convict us, but it also means God sees our struggles and invites us to honesty and change.",
+      "wellnessTip": "Is there a behavior or pattern you've been hiding? What would it look like to bring it into the light?",
+      "tags": ["hidden things", "shame", "honesty", "exposure"],
+      "date": "2026-01-28"
+    },
+    {
+      "id": 29,
+      "chapter": 14,
+      "verse": 8,
+      "text": "O hope of Israel, its Savior in times of distress, why are you like a stranger in the land, like a traveler who stays only a night?",
+      "reflection": "Jeremiah names the experience of feeling abandoned by God. Calling out to God about His apparent distance is itself prayer—it's honesty before God.",
+      "wellnessTip": "If God feels distant, express that honestly. 'God, I feel like you're far away. Help me find you.'",
+      "tags": ["distance", "distress", "stranger", "hope"],
+      "date": "2026-01-29"
+    },
+    {
+      "id": 30,
+      "chapter": 16,
+      "verse": 17,
+      "text": "My eyes are on all their ways; they are not hidden from me, nor is their sin concealed from my sight.",
+      "reflection": "God's attentiveness is total. Nothing is hidden. While this speaks to judgment, it also means God truly knows and sees you completely.",
+      "wellnessTip": "Be still with the fact that God sees all of you—the good, the hidden, the struggling. What does that stir in you?",
+      "tags": ["sight", "hidden", "attention", "knowledge"],
+      "date": "2026-01-30"
+    },
+    {
+      "id": 31,
+      "chapter": 18,
+      "verse": 6,
+      "text": "Like clay in the hand of the potter, so are you in my hand, Israel.',
+      "reflection": "We are not accidents or mistakes. We're in the hands of a master craftsman who knows exactly what He's making. Trust the process.",
+      "wellnessTip": "Imagine yourself as clay in God's hands. What shape is He forming you into?",
+      "tags": ["clay", "potter", "formation", "trust"],
+      "date": "2026-01-31"
+    },
+    {
+      "id": 32,
+      "chapter": 19,
+      "verse": 7,
+      "text": "In this place I will ruin the plans of Judah and Jerusalem. I will make them fall by the sword before their enemies, at the hands of those who seek their lives.",
+      "reflection": "Sometimes God must allow consequences. But even judgment from God is not the same as abandonment—it's often the most loving response to our choices.",
+      "wellnessTip": "Reflect on a time when consequences taught you something important. What did you learn?",
+      "tags": ["judgment", "consequences", "plans", "ruin"],
+      "date": "2026-02-01"
+    },
+    {
+      "id": 33,
+      "chapter": 21,
+      "verse": 8,
+      "text": "Furthermore, tell the people, 'This is what the Lord says: See, I am setting before you the way of life and the way of death.'",
+      "reflection": "Life and death are set before us daily. Our choices matter. God doesn't remove the choice but makes clear what leads to flourishing.",
+      "wellnessTip": "What choice are you facing? Examine it against the question: Does this lead to life or death?",
+      "tags": ["choice", "life", "death", "way"],
+      "date": "2026-02-02"
+    },
+    {
+      "id": 34,
+      "chapter": 22,
+      "verse": 29,
+      "text": "O land, land, land, hear the word of the Lord!",
+      "reflection": "Repetition emphasizes urgency and passion. God calls out repeatedly. We're invited to hear, again and again.",
+      "wellnessTip": "What is God calling you to hear today? Say it back to Him three times.",
+      "tags": ["hearing", "word", "calling", "land"],
+      "date": "2026-02-03"
+    },
+    {
+      "id": 35,
+      "chapter": 25,
+      "verse": 11,
+      "text": "This whole country will become a desolate wasteland, and these nations will serve the king of Babylon for seventy years.",
+      "reflection": "Even lengthy periods of exile and hardship have an end. What seems permanent will pass. God's restoration comes, even if not immediately.",
+      "wellnessTip": "Is there a season of difficulty you're in? Remember: 'This too shall pass.' Count the ways God has already restored you before.",
+      "tags": ["exile", "desolation", "seventy", "restoration"],
+      "date": "2026-02-04"
+    },
+    {
+      "id": 36,
+      "chapter": 27,
+      "verse": 5,
+      "text": "With my great power and outstretched arm I made the earth and its people and the animals that are on it, and I give it to anyone I please.",
+      "reflection": "Everything belongs to God. Our possessions, our abilities, our very lives are His. Stewardship begins with recognizing we're caretakers, not owners.",
+      "wellnessTip": "What are you grasping tightly? What might it mean to release it as God's, not yours?",
+      "tags": ["power", "creation", "ownership", "stewardship"],
+      "date": "2026-02-05"
+    },
+    {
+      "id": 37,
+      "chapter": 28,
+      "verse": 16,
+      "text": "Therefore hear the word of the Lord: I am about to remove you from the face of the earth. This very year you are going to die, because you have preached rebellion against the Lord.",
+      "reflection": "There are real consequences for preaching falsehood. Truth matters. Our words carry weight and shape reality.",
+      "wellnessTip": "Consider your words today. Are they true? Are they building up or tearing down?",
+      "tags": ["truth", "prophecy", "death", "rebellion"],
+      "date": "2026-02-06"
+    },
+    {
+      "id": 38,
+      "chapter": 30,
+      "verse": 7,
+      "text": "Alas! That day is so great that none is like it; it is the time of Jacob's trouble, but he will be saved out of it.",
+      "reflection": "Our greatest trials often precede our deepest transformations. The darkest hour comes before the dawn, and within it lies the seed of salvation.",
+      "wellnessTip": "If you're in a 'Jacob's trouble' season, hold onto this: rescue and transformation are already in motion.",
+      "tags": ["trouble", "salvation", "darkness", "transformation"],
+      "date": "2026-02-07"
+    },
+    {
+      "id": 39,
+      "chapter": 31,
+      "verse": 1,
+      "text": "At that time,' declares the Lord, 'I will be the God of all the families of Israel, and they will be my people.'",
+      "reflection": "No family is excluded. God claims all—the broken, the scattered, the lost. Belonging is offered to all.",
+      "wellnessTip": "If you've felt excluded or orphaned, meditate on this: You belong to God, and God belongs to you.",
+      "tags": ["family", "belonging", "covenant", "God"],
+      "date": "2026-02-08"
+    },
+    {
+      "id": 40,
+      "chapter": 32,
+      "verse": 17,
+      "text": "Ah, Lord God! It is you who has made the heavens and the earth by your great power and by your outstretched arm! Nothing is too hard for you.",
+      "reflection": "Wonder and amazement at God's power should lead us to trust. If God can create all things, surely He can handle what troubles us.",
+      "wellnessTip": "Name your biggest fear or obstacle. Now say: 'Nothing is too hard for the Lord.'",
+      "tags": ["power", "creation", "trust", "amazement"],
+      "date": "2026-02-09"
+    }
+  ]
+}

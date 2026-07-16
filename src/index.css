@@ -1,0 +1,84 @@
+:root {
+  --surface-0: #ffffff;
+  --surface-1: #f7f7f7;
+  --surface-2: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.2);
+  --fill-accent: #0066cc;
+  --on-accent: #ffffff;
+  --bg-danger: #ffe6e6;
+  --border-danger: #ff9999;
+  --text-danger: #cc0000;
+  --bg-success: #e6f3e6;
+  --border-success: #66cc66;
+  --text-success: #006600;
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-0: #1a1a1a;
+    --surface-1: #2d2d2d;
+    --surface-2: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-muted: #808080;
+    --border: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --fill-accent: #4fa3ff;
+    --on-accent: #000000;
+    --bg-danger: #663333;
+    --border-danger: #cc6666;
+    --text-danger: #ff6666;
+    --bg-success: #336633;
+    --border-success: #66cc66;
+    --text-success: #66ff66;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--surface-0);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:active {
+  transform: scale(0.98);
+}
