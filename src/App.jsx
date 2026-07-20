@@ -89,6 +89,7 @@ export default function DailyWisdomApp() {
   const [verses, setVerses] = useState([]);
   const [todayVerse, setTodayVerse] = useState(null);
   const [userPrefs, setUserPrefs] = useState({ notificationsEnabled: true });
+  const [subscribed, setSubscribed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -97,7 +98,9 @@ export default function DailyWisdomApp() {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setUserPrefs(userDoc.data().preferences || { notificationsEnabled: true });
+            const data = userDoc.data();
+            setUserPrefs(data.preferences || { notificationsEnabled: true });
+            setSubscribed(data.subscribed === true);
           }
         } catch (e) { /* non-critical */ }
         await loadVerses();
@@ -134,29 +137,46 @@ export default function DailyWisdomApp() {
     try { await signOut(auth); } catch (e) { console.error(e); }
   };
 
+  const handleSubscribe = async () => {
+    setSubscribed(true);
+    if (auth.currentUser) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), { subscribed: true }, { merge: true });
+      } catch (e) { console.error(e); }
+    }
+    setPage('archive');
+  };
+
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <AuthPage />;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--surface-0)' }}>
       {page === 'home' && (todayVerse
-        ? <TodayView verse={todayVerse} />
+        ? <TodayView verse={todayVerse} onOpenSettings={() => setPage('settings')} />
         : <EmptyState />)}
-      {page === 'archive' && <ArchiveView verses={verses} />}
-      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} />}
+      {page === 'archive' && (subscribed
+        ? <ArchiveView verses={verses} />
+        : <SubscribeView onSubscribe={handleSubscribe} />)}
+      {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
+      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} />}
 
-      <BottomNav page={page} setPage={setPage} />
+      <BottomNav page={page} setPage={setPage} subscribed={subscribed} />
     </div>
   );
 }
 
 // ---------- Bottom Navigation ----------
-function BottomNav({ page, setPage }) {
-  const items = [
-    { key: 'home', label: 'Today', icon: BookOpen },
-    { key: 'archive', label: 'Archive', icon: Search },
-    { key: 'settings', label: 'Settings', icon: Settings }
-  ];
+function BottomNav({ page, setPage, subscribed }) {
+  const items = subscribed
+    ? [
+        { key: 'home', label: 'Today', icon: BookOpen },
+        { key: 'archive', label: 'Archive', icon: Search }
+      ]
+    : [
+        { key: 'home', label: 'Today', icon: BookOpen },
+        { key: 'subscribe', label: 'Subscribe', icon: Sparkles }
+      ];
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
@@ -186,7 +206,7 @@ function BottomNav({ page, setPage }) {
 }
 
 // ---------- Today (hero image + overlay text) ----------
-function TodayView({ verse }) {
+function TodayView({ verse, onOpenSettings }) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const heroImg = imageForVerse(verse);
@@ -214,7 +234,7 @@ function TodayView({ verse }) {
   return (
     <div style={{ paddingBottom: 110 }}>
       {/* HERO */}
-      <div style={{ position: 'relative', height: '68vh', minHeight: 460, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: '72vh', minHeight: 520, overflow: 'hidden' }}>
         <img src={heroImg} alt="" style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
         }} />
@@ -224,23 +244,34 @@ function TodayView({ verse }) {
           background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.85) 100%)'
         }} />
 
-        {/* Top bar */}
+        {/* Centered header: title, promise subheading, date */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0,
-          padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          padding: '26px 20px 0', textAlign: 'center', color: '#fff'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
-            <BookOpen size={20} />
-            <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: 0.3, textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
-              Daily Wisdom
-            </span>
-          </div>
+          <h1 style={{
+            margin: 0,
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: 30, fontWeight: 700, letterSpacing: 0.5,
+            textShadow: '0 2px 12px rgba(0,0,0,0.75)'
+          }}>
+            Daily Wisdom
+          </h1>
+          <p style={{
+            margin: '8px 0 0', fontSize: 14.5, fontWeight: 500,
+            letterSpacing: 0.4, opacity: 0.95, lineHeight: 1.5,
+            textShadow: '0 1px 8px rgba(0,0,0,0.75)'
+          }}>
+            A verse · a reflection · a wellness practice
+            <br />
+            <span style={{ fontSize: 13, opacity: 0.85 }}>every day, from the Book of Jeremiah</span>
+          </p>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
             backgroundColor: 'rgba(255,255,255,0.18)',
             backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
             borderRadius: 999, padding: '6px 14px',
-            color: '#fff', fontSize: 12.5, fontWeight: 500
+            fontSize: 12.5, fontWeight: 500
           }}>
             <Calendar size={13} />
             {dateLabel}
@@ -321,6 +352,17 @@ function TodayView({ verse }) {
           {verse.wellnessTip}
         </p>
       </section>
+
+      {/* Subtle settings link - intentionally low-key */}
+      <div style={{ textAlign: 'center', marginTop: 30 }}>
+        <button onClick={onOpenSettings} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'transparent', border: 'none', cursor: 'pointer',
+          color: 'var(--text-muted)', fontSize: 13, fontWeight: 500, padding: 8
+        }}>
+          <Settings size={15} /> Settings
+        </button>
+      </div>
     </div>
   );
 }
@@ -338,6 +380,62 @@ function ActionButton({ onClick, icon, label, active, activeColor }) {
     }}>
       {icon}{label}
     </button>
+  );
+}
+
+// ---------- Subscribe ----------
+function SubscribeView({ onSubscribe }) {
+  return (
+    <div style={{
+      minHeight: '78vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', padding: '30px 20px 130px'
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 420, textAlign: 'center',
+        backgroundColor: 'var(--surface-2)', borderRadius: 24,
+        border: '1px solid rgba(0,0,0,0.06)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+        padding: '36px 26px'
+      }}>
+        <div style={{
+          width: 66, height: 66, margin: '0 auto 18px', borderRadius: 20,
+          backgroundColor: '#B8860B', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }}>
+          <Sparkles size={30} color="#fff" />
+        </div>
+        <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+          Unlock the full archive
+        </h2>
+        <p style={{ margin: '0 0 22px', fontSize: 15, lineHeight: 1.65, color: 'var(--text-secondary)' }}>
+          Subscribe to browse every passage — 40 verses from Jeremiah,
+          each with its reflection and wellness practice, beautifully illustrated.
+        </p>
+        <ul style={{
+          listStyle: 'none', padding: 0, margin: '0 0 26px',
+          textAlign: 'left', display: 'inline-block'
+        }}>
+          {['Full 40-verse archive', 'Search by word or chapter', 'Daily verse each morning'].map(item => (
+            <li key={item} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              fontSize: 15, color: 'var(--text-primary)', padding: '6px 0'
+            }}>
+              <Check size={17} style={{ color: '#1e7e34', flexShrink: 0 }} /> {item}
+            </li>
+          ))}
+        </ul>
+        <button onClick={onSubscribe} style={{
+          width: '100%', padding: '15px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 16, fontWeight: 700, cursor: 'pointer'
+        }}>
+          Subscribe — it's free
+        </button>
+        <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+          No payment needed. Unsubscribe anytime in Settings.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -442,7 +540,7 @@ function ArchiveView({ verses }) {
 }
 
 // ---------- Settings ----------
-function SettingsView({ userPrefs, setUserPrefs, onLogout }) {
+function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe }) {
   const toggle = async () => {
     const next = { ...userPrefs, notificationsEnabled: !userPrefs.notificationsEnabled };
     setUserPrefs(next);
@@ -463,6 +561,34 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout }) {
         backgroundColor: 'var(--surface-2)', borderRadius: 18,
         border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden'
       }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)'
+        }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 600 }}>Subscription</p>
+            <p style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
+              {subscribed ? 'Active — full archive unlocked' : 'Not subscribed'}
+            </p>
+          </div>
+          {subscribed ? (
+            <span style={{
+              fontSize: 13, fontWeight: 700, color: '#1e7e34',
+              backgroundColor: '#e6f3ea', borderRadius: 999, padding: '6px 14px'
+            }}>
+              Active
+            </span>
+          ) : (
+            <button onClick={onSubscribe} style={{
+              fontSize: 13.5, fontWeight: 700, color: '#fff',
+              backgroundColor: '#B8860B', border: 'none',
+              borderRadius: 999, padding: '9px 18px', cursor: 'pointer'
+            }}>
+              Subscribe
+            </button>
+          )}
+        </div>
+
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)'
@@ -526,7 +652,7 @@ function AuthPage() {
           email,
           createdAt: new Date(),
           preferences: { notificationsEnabled: true },
-          subscribed: true,
+          subscribed: false,
           isAdmin: false
         });
       } else {
