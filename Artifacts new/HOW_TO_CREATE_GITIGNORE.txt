@@ -1,0 +1,187 @@
+================================================================================
+HOW TO CREATE THE .gitignore FILE
+================================================================================
+
+The .gitignore file is HIDDEN (starts with a dot) so it's hard to find.
+Here's exactly how to create it:
+
+================================================================================
+OPTION 1: DOWNLOAD AND RENAME (EASIEST)
+================================================================================
+
+1. Download the file: "gitignore.txt" from Claude outputs
+   
+2. Save it to your Desktop (or Downloads folder)
+
+3. RENAME IT:
+   - Right-click on "gitignore.txt"
+   - Select: "Rename"
+   - Change "gitignore.txt" to ".gitignore" (add the dot at the start)
+   - Press Enter
+   
+   ** IMPORTANT: The name must start with a DOT (.) **
+   
+   Before: gitignore.txt
+   After:  .gitignore
+
+4. Move it to: Desktop/daily-wisdom-jeremiah/
+
+5. Done!
+
+
+================================================================================
+OPTION 2: CREATE MANUALLY IN YOUR PROJECT FOLDER (IF RENAME DOESN'T WORK)
+================================================================================
+
+Windows:
+1. Open File Explorer
+2. Navigate to: Desktop/daily-wisdom-jeremiah/
+3. Right-click in empty space
+4. Select: "New" → "Text Document"
+5. Name it: ".gitignore" (with the dot!)
+   (If it says "name must start with a letter", that's Windows being picky)
+6. Open it in Notepad
+7. Copy and paste the content below into it
+8. Save and close
+
+Mac:
+1. Open Terminal
+2. Type:
+   cd ~/Desktop/daily-wisdom-jeremiah
+   nano .gitignore
+3. Copy and paste the content below
+4. Press: Ctrl + X, then Y, then Enter
+
+Linux:
+1. Open Terminal
+2. Type:
+   cd ~/Desktop/daily-wisdom-jeremiah
+   nano .gitignore
+3. Copy and paste the content below
+4. Press: Ctrl + X, then Y, then Enter
+
+
+================================================================================
+CONTENT TO PUT IN .gitignore FILE
+================================================================================
+
+Copy everything below and paste into your .gitignore file:
+
+---START COPY---
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+---END COPY---
+
+
+================================================================================
+HOW TO VERIFY IT WORKED
+================================================================================
+
+Windows:
+1. Open File Explorer
+2. Go to: Desktop/daily-wisdom-jeremiah/
+3. Look for a file that starts with a dot (.)
+4. You should see: .gitignore (might look like a hidden file)
+
+Mac/Linux:
+1. Open Terminal
+2. Type: cd ~/Desktop/daily-wisdom-jeremiah
+3. Type: ls -la
+4. You should see: .gitignore in the list
+
+
+================================================================================
+WHAT IF WINDOWS WON'T LET ME NAME IT WITH A DOT?
+================================================================================
+
+Windows sometimes blocks files that start with a dot.
+
+Solution: Use a text editor instead:
+
+1. Download "gitignore.txt"
+2. Right-click → Open With → Notepad (or any text editor)
+3. Don't change the content
+4. File → Save As
+5. In the filename box, type: ".gitignore"
+6. Make sure "Save as type" is set to: "All Files (*.*)"
+7. Click Save
+8. Move it to: Desktop/daily-wisdom-jeremiah/
+
+If that still doesn't work:
+
+1. Open Command Prompt (search "cmd")
+2. Type:
+   cd Desktop\daily-wisdom-jeremiah
+   copy gitignore.txt .gitignore
+3. Press Enter
+4. Done!
+
+
+================================================================================
+STILL CAN'T FIND IT?
+================================================================================
+
+On Mac/Linux, hidden files (starting with dot) are hidden by default:
+
+Mac:
+1. In Finder, press: Cmd + Shift + . (period)
+2. Now you should see .gitignore
+
+Linux:
+1. In file manager, press: Ctrl + H
+2. Now you should see .gitignore
+
+
+================================================================================
+YOU'RE DONE WHEN
+================================================================================
+
+Your folder looks like:
+
+Desktop/daily-wisdom-jeremiah/
+├── .gitignore                  ← This is created!
+├── src/
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── package.json
+├── vite.config.js
+├── vercel.json
+└── jeremiah-verses-db.json
+
+
+================================================================================

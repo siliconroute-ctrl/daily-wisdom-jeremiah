@@ -1,0 +1,183 @@
+================================================================================
+FOLDER STRUCTURE — VISUAL GUIDE
+================================================================================
+
+Your folder should look EXACTLY like this:
+
+C:\Users\YourUsername\Documents\daily-wisdom-jeremiah\    (Windows)
+or
+~/Documents/daily-wisdom-jeremiah/                          (Mac)
+or
+~/daily-wisdom-jeremiah/                                    (Linux)
+
+├── src/                          ← This is a FOLDER
+│   ├── App.jsx                   ← File inside src/
+│   ├── main.jsx                  ← File inside src/
+│   └── index.css                 ← File inside src/
+│
+├── index.html                    ← File at root level
+├── package.json                  ← File at root level
+├── vite.config.js                ← File at root level
+├── vercel.json                   ← File at root level
+├── .gitignore                    ← File at root level
+└── jeremiah-verses-db.json       ← File at root level
+
+
+================================================================================
+HOW TO CREATE THIS STRUCTURE
+================================================================================
+
+STEP 1: Create the main folder
+  Windows:  C:\Users\YourUsername\Documents\daily-wisdom-jeremiah
+  Mac:      ~/Documents/daily-wisdom-jeremiah
+  Linux:    ~/daily-wisdom-jeremiah
+
+STEP 2: Inside that folder, create a subfolder called "src"
+  - Right-click → New → Folder (Windows)
+  - Right-click → New Folder (Mac)
+  - mkdir src (Linux/Terminal)
+
+STEP 3: Copy the files
+  Into src/ folder:
+    ✓ App.jsx
+    ✓ main.jsx
+    ✓ index.css
+
+  Into daily-wisdom-jeremiah/ folder (root level):
+    ✓ index.html
+    ✓ package.json
+    ✓ vite.config.js
+    ✓ vercel.json
+    ✓ .gitignore
+    ✓ jeremiah-verses-db.json
+
+
+================================================================================
+CHECKING YOUR SETUP
+================================================================================
+
+WRONG ❌ (DON'T do this):
+
+daily-wisdom-jeremiah/
+├── App.jsx                  ← WRONG! Should be in src/
+├── main.jsx                 ← WRONG! Should be in src/
+├── index.css                ← WRONG! Should be in src/
+├── index.html
+├── package.json
+└── ...
+
+
+CORRECT ✅ (DO this):
+
+daily-wisdom-jeremiah/
+├── src/                     ← CORRECT! Folder created
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── package.json
+└── ...
+
+
+================================================================================
+FILE BY FILE CHECKLIST
+================================================================================
+
+In your daily-wisdom-jeremiah/ folder, check:
+
+ROOT LEVEL FILES (directly in daily-wisdom-jeremiah/):
+  ☐ index.html
+  ☐ package.json
+  ☐ vite.config.js
+  ☐ vercel.json
+  ☐ .gitignore
+  ☐ jeremiah-verses-db.json
+
+SRC/ FOLDER AND ITS FILES:
+  ☐ src/ (folder)
+  ☐ src/App.jsx (file inside src)
+  ☐ src/main.jsx (file inside src)
+  ☐ src/index.css (file inside src)
+
+
+================================================================================
+AFTER SETUP, RUN THESE COMMANDS
+================================================================================
+
+1. Open Terminal/Command Prompt
+2. Navigate to your folder:
+   cd C:\Users\YourUsername\Documents\daily-wisdom-jeremiah  (Windows)
+   or
+   cd ~/Documents/daily-wisdom-jeremiah  (Mac)
+
+3. Run:
+   npm install
+
+4. Then:
+   npm run dev
+
+You should see: "Local: http://localhost:5173"
+
+
+================================================================================
+IF SOMETHING IS WRONG
+================================================================================
+
+"npm install failed"
+  → Check that package.json exists in root folder
+  → Check folder structure is correct
+
+"npm run dev doesn't work"
+  → Make sure you're in daily-wisdom-jeremiah folder
+  → Check that src/ folder exists with 3 files
+
+"Can't find files"
+  → Use File Explorer (Windows) or Finder (Mac) to navigate
+  → Make sure you can SEE all 8 files/folders
+
+"Module not found"
+  → Make sure src/ is a FOLDER, not a file
+  → Make sure App.jsx, main.jsx, index.css are INSIDE src/
+
+================================================================================
+QUICK SETUP REFERENCE
+================================================================================
+
+Windows Command Prompt:
+  cd C:\Users\YourUsername\Documents
+  mkdir daily-wisdom-jeremiah
+  cd daily-wisdom-jeremiah
+  [Copy all files here]
+  npm install
+  npm run dev
+
+Mac Terminal:
+  cd ~/Documents
+  mkdir daily-wisdom-jeremiah
+  cd daily-wisdom-jeremiah
+  [Copy all files here]
+  npm install
+  npm run dev
+
+Linux Terminal:
+  mkdir ~/daily-wisdom-jeremiah
+  cd ~/daily-wisdom-jeremiah
+  [Copy all files here]
+  npm install
+  npm run dev
+
+
+================================================================================
+YOU'RE READY WHEN
+================================================================================
+
+✅ Folder daily-wisdom-jeremiah exists
+✅ Sub-folder src/ exists inside it
+✅ 3 files are in src/
+✅ 6 files are in root (daily-wisdom-jeremiah/)
+✅ npm install ran without errors
+✅ npm run dev shows "Local: http://localhost:5173"
+
+That's it! You're ready to test and deploy.
+
+================================================================================
