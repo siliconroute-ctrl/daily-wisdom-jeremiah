@@ -17,6 +17,11 @@ import {
   setDoc,
   updateDoc
 } from 'firebase/firestore';
+import { getMessaging, getToken } from 'firebase/messaging';
+
+// Web Push key - get yours from: Firebase Console > Project Settings >
+// Cloud Messaging tab > Web Push certificates > Generate key pair
+const VAPID_KEY = 'BJP2Y8VeCpt1GoPFSlw4vjuMw0w8KtY2gsH3jGJB_7Af20xucm-bsmLcvLnvFJAmlpP_2OTlkasQOFbNRMrA01s';
 
 // ---------- Firebase ----------
 const firebaseConfig = {
@@ -164,7 +169,8 @@ export default function DailyWisdomApp() {
         ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
         : <SubscribeView onSubscribe={handleSubscribe} />)}
       {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
-      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} />}
+      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} />}
+      {page === 'privacy' && <PrivacyView onBack={() => setPage('settings')} />}
 
       <BottomNav page={page} setPage={setPage} subscribed={subscribed} />
     </div>
@@ -568,13 +574,52 @@ function ArchiveView({ verses, subscribedAt }) {
 }
 
 // ---------- Settings ----------
-function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe }) {
+function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy }) {
+  const [pushStatus, setPushStatus] = useState('');
+
   const toggle = async () => {
-    const next = { ...userPrefs, notificationsEnabled: !userPrefs.notificationsEnabled };
+    const turningOn = !userPrefs.notificationsEnabled;
+    setPushStatus('');
+
+    if (turningOn) {
+      // POPIA: explicit opt-in. Ask browser permission + register device for push.
+      if (VAPID_KEY.startsWith('PASTE')) {
+        setPushStatus('Push is not configured yet — your preference was saved.');
+      } else if (!('Notification' in window)) {
+        setPushStatus('This browser does not support notifications.');
+        return;
+      } else {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') {
+            setPushStatus('Permission was declined — notifications stay off.');
+            return;
+          }
+          const messaging = getMessaging(app);
+          const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+          if (auth.currentUser && token) {
+            await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
+          }
+          setPushStatus('Notifications enabled on this device.');
+        } catch (e) {
+          console.error(e);
+          setPushStatus('Could not enable push on this device — preference saved for email.');
+        }
+      }
+    } else {
+      setPushStatus('Notifications switched off.');
+      if (auth.currentUser) {
+        try {
+          await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: null }, { merge: true });
+        } catch (e) { console.error(e); }
+      }
+    }
+
+    const next = { ...userPrefs, notificationsEnabled: turningOn };
     setUserPrefs(next);
     if (auth.currentUser) {
       try {
-        await updateDoc(doc(db, 'users', auth.currentUser.uid), { preferences: next });
+        await setDoc(doc(db, 'users', auth.currentUser.uid), { preferences: next }, { merge: true });
       } catch (e) { console.error(e); }
     }
   };
@@ -660,6 +705,25 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
           </button>
         </div>
 
+        {pushStatus && (
+          <p style={{
+            margin: 0, padding: '12px 20px', fontSize: 13.5,
+            color: 'var(--text-secondary)', backgroundColor: '#faf8f4',
+            borderBottom: '1px solid rgba(0,0,0,0.06)'
+          }}>
+            {pushStatus}
+          </p>
+        )}
+
+        <button onClick={onOpenPrivacy} style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '18px 20px', background: 'transparent', border: 'none',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          cursor: 'pointer', fontSize: 15.5, fontWeight: 600, color: 'var(--text-primary)'
+        }}>
+          <BookOpen size={18} /> Privacy policy
+        </button>
+
         <button onClick={onLogout} style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
           padding: '18px 20px', background: 'transparent', border: 'none',
@@ -680,6 +744,78 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
   );
 }
 
+// ---------- Privacy policy (POPIA) ----------
+function PrivacyView({ onBack }) {
+  const h = { fontSize: 16, fontWeight: 700, margin: '22px 0 8px', color: 'var(--text-primary)' };
+  const p = { fontSize: 14.5, lineHeight: 1.75, margin: '0 0 10px', color: 'var(--text-secondary)' };
+
+  return (
+    <div style={{ padding: '22px 20px 130px', maxWidth: 680, margin: '0 auto' }}>
+      <button onClick={onBack} style={{
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        color: '#B8860B', fontSize: 14.5, fontWeight: 600, padding: '4px 0', marginBottom: 10
+      }}>
+        ← Back
+      </button>
+
+      <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
+        Privacy policy
+      </h2>
+      <p style={{ ...p, fontSize: 13 }}>
+        Daily Wisdom from Jeremiah · Last updated July 2026
+      </p>
+
+      <h3 style={h}>Who we are</h3>
+      <p style={p}>
+        This app is operated by Inspired Living with Joao de Gois, based in South Africa.
+        We are the "responsible party" under the Protection of Personal Information Act
+        (POPIA). Questions or requests: contact us through our Facebook page,
+        Inspired Living with Joao de Gois.
+      </p>
+
+      <h3 style={h}>What we collect, and why</h3>
+      <p style={p}>
+        We collect only what the app needs to work: your email address (to create and
+        secure your account), your subscription status and date (to build your personal
+        verse archive), your notification preference, and — only if you switch
+        notifications on — a device token that lets us deliver the daily verse to your
+        device. We do not collect your name, location, contacts, or any special personal
+        information, and we never sell or share your information with anyone.
+      </p>
+
+      <h3 style={h}>Consent and notifications</h3>
+      <p style={p}>
+        Notifications are off by default. They are only sent if you actively switch them
+        on in Settings — this is your consent under POPIA. You can withdraw consent at
+        any time by switching the toggle off, and delivery stops immediately.
+      </p>
+
+      <h3 style={h}>Where your information is stored</h3>
+      <p style={p}>
+        Your information is stored securely on Google Firebase servers, protected by
+        industry-standard encryption. These servers may be located outside South Africa;
+        such transfers are permitted under section 72 of POPIA because Google provides
+        an adequate level of protection through binding corporate rules.
+      </p>
+
+      <h3 style={h}>Your rights</h3>
+      <p style={p}>
+        Under POPIA you may ask us at any time: what information we hold about you, to
+        correct it, or to delete your account and all associated information. We will
+        act on deletion requests within a reasonable time. You may also lodge a
+        complaint with the Information Regulator of South Africa
+        (inforegulator.org.za).
+      </p>
+
+      <h3 style={h}>Changes</h3>
+      <p style={p}>
+        If this policy changes, the updated version will appear here with a new date.
+        Continued use of the app after changes means you accept the updated policy.
+      </p>
+    </div>
+  );
+}
+
 // ---------- Auth ----------
 function AuthPage() {
   const [email, setEmail] = useState('');
@@ -687,6 +823,15 @@ function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
+  if (showPrivacy) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--surface-0)' }}>
+        <PrivacyView onBack={() => setShowPrivacy(false)} />
+      </div>
+    );
+  }
 
   const submit = async () => {
     setError('');
@@ -795,6 +940,13 @@ function AuthPage() {
           fontSize: 14.5, fontWeight: 600, cursor: 'pointer'
         }}>
           {isSignUp ? 'I already have an account' : 'New here? Create an account'}
+        </button>
+
+        <button onClick={() => setShowPrivacy(true)} style={{
+          width: '100%', marginTop: 14, background: 'transparent', border: 'none',
+          cursor: 'pointer', fontSize: 12.5, color: '#999', fontWeight: 500
+        }}>
+          Privacy policy
         </button>
       </div>
     </div>
