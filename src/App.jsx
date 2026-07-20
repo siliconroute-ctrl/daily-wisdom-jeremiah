@@ -21,7 +21,7 @@ import { getMessaging, getToken } from 'firebase/messaging';
 
 // Web Push key - get yours from: Firebase Console > Project Settings >
 // Cloud Messaging tab > Web Push certificates > Generate key pair
-const VAPID_KEY = 'BJP2Y8VeCpt1GoPFSlw4vjuMw0w8KtY2gsH3jGJB_7Af20xucm-bsmLcvLnvFJAmlpP_2OTlkasQOFbNRMrA01s';
+const VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
 
 // ---------- Firebase ----------
 const firebaseConfig = {
@@ -186,7 +186,7 @@ function BottomNav({ page, setPage, subscribed }) {
       ]
     : [
         { key: 'home', label: 'Today', icon: BookOpen },
-        { key: 'subscribe', label: 'Subscribe', icon: Sparkles }
+        { key: 'subscribe', label: 'Receive Daily', icon: Sparkles }
       ];
   return (
     <nav style={{
@@ -416,17 +416,17 @@ function SubscribeView({ onSubscribe }) {
           <Sparkles size={30} color="#fff" />
         </div>
         <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
-          Unlock the full archive
+          Receive Daily Wisdom
         </h2>
         <p style={{ margin: '0 0 22px', fontSize: 15, lineHeight: 1.65, color: 'var(--text-secondary)' }}>
-          Subscribe to browse every passage — 40 verses from Jeremiah,
-          each with its reflection and wellness practice, beautifully illustrated.
+          Each day you'll receive a verse, a reflection and a wellness practice —
+          and your personal archive grows with every passing day.
         </p>
         <ul style={{
           listStyle: 'none', padding: 0, margin: '0 0 26px',
           textAlign: 'left', display: 'inline-block'
         }}>
-          {['Full 40-verse archive', 'Search by word or chapter', 'Daily verse each morning'].map(item => (
+          {['A new passage unlocked every day', 'Search your growing archive', '100% free — no payment, now or ever'].map(item => (
             <li key={item} style={{
               display: 'flex', alignItems: 'center', gap: 10,
               fontSize: 15, color: 'var(--text-primary)', padding: '6px 0'
@@ -440,10 +440,10 @@ function SubscribeView({ onSubscribe }) {
           backgroundColor: '#B8860B', color: '#fff', border: 'none',
           borderRadius: 14, fontSize: 16, fontWeight: 700, cursor: 'pointer'
         }}>
-          Subscribe — it's free
+          Receive Daily — Free
         </button>
         <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
-          No payment needed. Unsubscribe anytime in Settings.
+          Nothing to pay, ever. Stop anytime in Settings.
         </p>
       </div>
     </div>
@@ -657,9 +657,9 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
           padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)'
         }}>
           <div>
-            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 600 }}>Subscription</p>
+            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 600 }}>Daily verses</p>
             <p style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
-              {subscribed ? 'Active — full archive unlocked' : 'Not subscribed'}
+              {subscribed ? 'Active — your archive grows daily' : 'Not receiving yet — always free'}
             </p>
           </div>
           {subscribed ? (
@@ -675,7 +675,7 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
               backgroundColor: '#B8860B', border: 'none',
               borderRadius: 999, padding: '9px 18px', cursor: 'pointer'
             }}>
-              Subscribe
+              Receive Daily
             </button>
           )}
         </div>
