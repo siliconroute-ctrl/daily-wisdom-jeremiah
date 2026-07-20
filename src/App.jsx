@@ -90,6 +90,7 @@ export default function DailyWisdomApp() {
   const [todayVerse, setTodayVerse] = useState(null);
   const [userPrefs, setUserPrefs] = useState({ notificationsEnabled: true });
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribedAt, setSubscribedAt] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -99,8 +100,9 @@ export default function DailyWisdomApp() {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
-            setUserPrefs(data.preferences || { notificationsEnabled: true });
+            setUserPrefs(data.preferences || { notificationsEnabled: false });
             setSubscribed(data.subscribed === true);
+            setSubscribedAt(data.subscribedAt || null);
           }
         } catch (e) { /* non-critical */ }
         await loadVerses();
@@ -138,10 +140,13 @@ export default function DailyWisdomApp() {
   };
 
   const handleSubscribe = async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     setSubscribed(true);
+    setSubscribedAt(todayStr);
     if (auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid), { subscribed: true }, { merge: true });
+        await setDoc(doc(db, 'users', auth.currentUser.uid),
+          { subscribed: true, subscribedAt: todayStr }, { merge: true });
       } catch (e) { console.error(e); }
     }
     setPage('archive');
@@ -156,7 +161,7 @@ export default function DailyWisdomApp() {
         ? <TodayView verse={todayVerse} onOpenSettings={() => setPage('settings')} />
         : <EmptyState />)}
       {page === 'archive' && (subscribed
-        ? <ArchiveView verses={verses} />
+        ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
         : <SubscribeView onSubscribe={handleSubscribe} />)}
       {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
       {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} />}
@@ -439,12 +444,33 @@ function SubscribeView({ onSubscribe }) {
   );
 }
 
+// Verses "delivered" since the user subscribed: one per day, newest first.
+// Follows the same daily rotation as the Today view.
+function deliveredVerses(verses, subscribedAt) {
+  if (!verses.length) return [];
+  if (!subscribedAt) return verses.slice().reverse(); // legacy accounts: full archive
+  const msPerDay = 86400000;
+  const start = new Date(subscribedAt + 'T00:00:00');
+  let days = Math.floor((Date.now() - start.getTime()) / msPerDay) + 1;
+  if (days < 1) days = 1;
+  if (days >= verses.length) return verses.slice().reverse();
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / msPerDay);
+  const len = verses.length;
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    const idx = ((dayOfYear - i) % len + len) % len;
+    out.push(verses[idx]);
+  }
+  return out;
+}
+
 // ---------- Archive ----------
-function ArchiveView({ verses }) {
+function ArchiveView({ verses, subscribedAt }) {
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState(null);
 
-  const filtered = verses.filter(v =>
+  const unlocked = deliveredVerses(verses, subscribedAt);
+  const filtered = unlocked.filter(v =>
     (v.text || '').toLowerCase().includes(q.toLowerCase()) ||
     (v.reflection || '').toLowerCase().includes(q.toLowerCase()) ||
     String(v.chapter).includes(q)
@@ -453,10 +479,12 @@ function ArchiveView({ verses }) {
   return (
     <div style={{ padding: '22px 16px 120px', maxWidth: 760, margin: '0 auto' }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-        Verse archive
+        Your archive
       </h2>
       <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--text-secondary)' }}>
-        {verses.length} passages from the Book of Jeremiah
+        {unlocked.length < verses.length
+          ? `${unlocked.length} of ${verses.length} passages unlocked — a new one arrives each day`
+          : `All ${verses.length} passages from the Book of Jeremiah`}
       </p>
 
       <div style={{
@@ -562,6 +590,24 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
         border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden'
       }}>
         <div style={{
+          padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+          backgroundColor: '#faf8f4'
+        }}>
+          <p style={{
+            margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: 1.2,
+            textTransform: 'uppercase', color: 'var(--text-muted)'
+          }}>
+            Signed in as
+          </p>
+          <p style={{
+            margin: '4px 0 0', fontSize: 15.5, fontWeight: 600,
+            color: 'var(--text-primary)', wordBreak: 'break-all'
+          }}>
+            {auth.currentUser?.email || 'Unknown account'}
+          </p>
+        </div>
+
+        <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)'
         }}>
@@ -596,7 +642,7 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
           <div>
             <p style={{ margin: 0, fontSize: 15.5, fontWeight: 600 }}>Daily notifications</p>
             <p style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
-              Receive the daily verse each morning
+              Off by default. Turn on to receive the daily verse — switch off anytime.
             </p>
           </div>
           <button onClick={toggle} aria-label="Toggle notifications" style={{
@@ -651,7 +697,7 @@ function AuthPage() {
         await setDoc(doc(db, 'users', cred.user.uid), {
           email,
           createdAt: new Date(),
-          preferences: { notificationsEnabled: true },
+          preferences: { notificationsEnabled: false },
           subscribed: false,
           isAdmin: false
         });
