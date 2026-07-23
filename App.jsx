@@ -17,6 +17,25 @@ import {
   setDoc,
   updateDoc
 } from 'firebase/firestore';
+import { getMessaging, getToken } from 'firebase/messaging';
+
+// Web Push key - get yours from: Firebase Console > Project Settings >
+// Cloud Messaging tab > Web Push certificates > Generate key pair
+const VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
+
+// Capture Android's "Add to Home Screen" prompt the moment it's offered.
+// This must be attached before React even renders, or the event can be
+// missed entirely (the browser only fires it once per session).
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = () =>
+  /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+  (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1); // iPadOS 13+
 
 // ---------- Firebase ----------
 const firebaseConfig = {
@@ -89,6 +108,10 @@ export default function DailyWisdomApp() {
   const [verses, setVerses] = useState([]);
   const [todayVerse, setTodayVerse] = useState(null);
   const [userPrefs, setUserPrefs] = useState({ notificationsEnabled: true });
+  const [subscribed, setSubscribed] = useState(false);
+  const [subscribedAt, setSubscribedAt] = useState(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showIOSHelp, setShowIOSHelp] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -97,7 +120,10 @@ export default function DailyWisdomApp() {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setUserPrefs(userDoc.data().preferences || { notificationsEnabled: true });
+            const data = userDoc.data();
+            setUserPrefs(data.preferences || { notificationsEnabled: false });
+            setSubscribed(data.subscribed === true);
+            setSubscribedAt(data.subscribedAt || null);
           }
         } catch (e) { /* non-critical */ }
         await loadVerses();
@@ -134,29 +160,66 @@ export default function DailyWisdomApp() {
     try { await signOut(auth); } catch (e) { console.error(e); }
   };
 
+  const handleSubscribe = async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setSubscribed(true);
+    setSubscribedAt(todayStr);
+    if (auth.currentUser) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid),
+          { subscribed: true, subscribedAt: todayStr }, { merge: true });
+      } catch (e) { console.error(e); }
+    }
+    setPage('archive');
+  };
+
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <AuthPage />;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--surface-0)' }}>
       {page === 'home' && (todayVerse
-        ? <TodayView verse={todayVerse} />
+        ? <TodayView verse={todayVerse} onOpenSettings={() => setPage('settings')} />
         : <EmptyState />)}
-      {page === 'archive' && <ArchiveView verses={verses} />}
-      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} />}
+      {page === 'archive' && (subscribed
+        ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
+        : <SubscribeView onSubscribe={handleSubscribe} />)}
+      {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
+      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} />}
+      {page === 'privacy' && <PrivacyView onBack={() => setPage('settings')} />}
 
-      <BottomNav page={page} setPage={setPage} />
+      {showIOSHelp && <IOSInstallHelpModal onDismiss={() => setShowIOSHelp(false)} />}
+
+      {showInstallPrompt && (
+        <InstallPromptModal
+          onInstall={async () => {
+            setShowInstallPrompt(false);
+            if (deferredInstallPrompt) {
+              deferredInstallPrompt.prompt();
+              await deferredInstallPrompt.userChoice;
+              deferredInstallPrompt = null;
+            }
+          }}
+          onDismiss={() => setShowInstallPrompt(false)}
+        />
+      )}
+
+      <BottomNav page={page} setPage={setPage} subscribed={subscribed} />
     </div>
   );
 }
 
 // ---------- Bottom Navigation ----------
-function BottomNav({ page, setPage }) {
-  const items = [
-    { key: 'home', label: 'Today', icon: BookOpen },
-    { key: 'archive', label: 'Archive', icon: Search },
-    { key: 'settings', label: 'Settings', icon: Settings }
-  ];
+function BottomNav({ page, setPage, subscribed }) {
+  const items = subscribed
+    ? [
+        { key: 'home', label: 'Today', icon: BookOpen },
+        { key: 'archive', label: 'Archive', icon: Search }
+      ]
+    : [
+        { key: 'home', label: 'Today', icon: BookOpen },
+        { key: 'subscribe', label: 'Receive Daily', icon: Sparkles }
+      ];
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
@@ -186,7 +249,7 @@ function BottomNav({ page, setPage }) {
 }
 
 // ---------- Today (hero image + overlay text) ----------
-function TodayView({ verse }) {
+function TodayView({ verse, onOpenSettings }) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const heroImg = imageForVerse(verse);
@@ -214,7 +277,7 @@ function TodayView({ verse }) {
   return (
     <div style={{ paddingBottom: 110 }}>
       {/* HERO */}
-      <div style={{ position: 'relative', height: '68vh', minHeight: 460, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: '72vh', minHeight: 520, overflow: 'hidden' }}>
         <img src={heroImg} alt="" style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
         }} />
@@ -224,23 +287,34 @@ function TodayView({ verse }) {
           background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.85) 100%)'
         }} />
 
-        {/* Top bar */}
+        {/* Centered header: title, promise subheading, date */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0,
-          padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          padding: '26px 20px 0', textAlign: 'center', color: '#fff'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
-            <BookOpen size={20} />
-            <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: 0.3, textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
-              Daily Wisdom
-            </span>
-          </div>
+          <h1 style={{
+            margin: 0,
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: 30, fontWeight: 700, letterSpacing: 0.5,
+            textShadow: '0 2px 12px rgba(0,0,0,0.75)'
+          }}>
+            Daily Wisdom
+          </h1>
+          <p style={{
+            margin: '8px 0 0', fontSize: 14.5, fontWeight: 500,
+            letterSpacing: 0.4, opacity: 0.95, lineHeight: 1.5,
+            textShadow: '0 1px 8px rgba(0,0,0,0.75)'
+          }}>
+            A verse · a reflection · a wellness practice
+            <br />
+            <span style={{ fontSize: 13, opacity: 0.85 }}>every day, from the Book of Jeremiah</span>
+          </p>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
             backgroundColor: 'rgba(255,255,255,0.18)',
             backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
             borderRadius: 999, padding: '6px 14px',
-            color: '#fff', fontSize: 12.5, fontWeight: 500
+            fontSize: 12.5, fontWeight: 500
           }}>
             <Calendar size={13} />
             {dateLabel}
@@ -321,6 +395,17 @@ function TodayView({ verse }) {
           {verse.wellnessTip}
         </p>
       </section>
+
+      {/* Subtle settings link - intentionally low-key */}
+      <div style={{ textAlign: 'center', marginTop: 30 }}>
+        <button onClick={onOpenSettings} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'transparent', border: 'none', cursor: 'pointer',
+          color: 'var(--text-muted)', fontSize: 13, fontWeight: 500, padding: 8
+        }}>
+          <Settings size={15} /> Settings
+        </button>
+      </div>
     </div>
   );
 }
@@ -341,12 +426,89 @@ function ActionButton({ onClick, icon, label, active, activeColor }) {
   );
 }
 
+// ---------- Subscribe ----------
+function SubscribeView({ onSubscribe }) {
+  return (
+    <div style={{
+      minHeight: '78vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', padding: '30px 20px 130px'
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 420, textAlign: 'center',
+        backgroundColor: 'var(--surface-2)', borderRadius: 24,
+        border: '1px solid rgba(0,0,0,0.06)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+        padding: '36px 26px'
+      }}>
+        <div style={{
+          width: 66, height: 66, margin: '0 auto 18px', borderRadius: 20,
+          backgroundColor: '#B8860B', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }}>
+          <Sparkles size={30} color="#fff" />
+        </div>
+        <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+          Receive Daily Wisdom
+        </h2>
+        <p style={{ margin: '0 0 22px', fontSize: 15, lineHeight: 1.65, color: 'var(--text-secondary)' }}>
+          Each day you'll receive a verse, a reflection and a wellness practice —
+          and your personal archive grows with every passing day.
+        </p>
+        <ul style={{
+          listStyle: 'none', padding: 0, margin: '0 0 26px',
+          textAlign: 'left', display: 'inline-block'
+        }}>
+          {['A new passage unlocked every day', 'Search your growing archive', '100% free — no payment, now or ever'].map(item => (
+            <li key={item} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              fontSize: 15, color: 'var(--text-primary)', padding: '6px 0'
+            }}>
+              <Check size={17} style={{ color: '#1e7e34', flexShrink: 0 }} /> {item}
+            </li>
+          ))}
+        </ul>
+        <button onClick={onSubscribe} style={{
+          width: '100%', padding: '15px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 16, fontWeight: 700, cursor: 'pointer'
+        }}>
+          Receive Daily — Free
+        </button>
+        <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+          Nothing to pay, ever. Stop anytime in Settings.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Verses "delivered" since the user subscribed: one per day, newest first.
+// Follows the same daily rotation as the Today view.
+function deliveredVerses(verses, subscribedAt) {
+  if (!verses.length) return [];
+  if (!subscribedAt) return verses.slice().reverse(); // legacy accounts: full archive
+  const msPerDay = 86400000;
+  const start = new Date(subscribedAt + 'T00:00:00');
+  let days = Math.floor((Date.now() - start.getTime()) / msPerDay) + 1;
+  if (days < 1) days = 1;
+  if (days >= verses.length) return verses.slice().reverse();
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / msPerDay);
+  const len = verses.length;
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    const idx = ((dayOfYear - i) % len + len) % len;
+    out.push(verses[idx]);
+  }
+  return out;
+}
+
 // ---------- Archive ----------
-function ArchiveView({ verses }) {
+function ArchiveView({ verses, subscribedAt }) {
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState(null);
 
-  const filtered = verses.filter(v =>
+  const unlocked = deliveredVerses(verses, subscribedAt);
+  const filtered = unlocked.filter(v =>
     (v.text || '').toLowerCase().includes(q.toLowerCase()) ||
     (v.reflection || '').toLowerCase().includes(q.toLowerCase()) ||
     String(v.chapter).includes(q)
@@ -355,10 +517,12 @@ function ArchiveView({ verses }) {
   return (
     <div style={{ padding: '22px 16px 120px', maxWidth: 760, margin: '0 auto' }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
-        Verse archive
+        Your archive
       </h2>
       <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--text-secondary)' }}>
-        {verses.length} passages from the Book of Jeremiah
+        {unlocked.length < verses.length
+          ? `${unlocked.length} of ${verses.length} passages unlocked — a new one arrives each day`
+          : `All ${verses.length} passages from the Book of Jeremiah`}
       </p>
 
       <div style={{
@@ -442,13 +606,59 @@ function ArchiveView({ verses }) {
 }
 
 // ---------- Settings ----------
-function SettingsView({ userPrefs, setUserPrefs, onLogout }) {
+function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy, onNotificationsEnabled, onShowIOSHelp }) {
+  const [pushStatus, setPushStatus] = useState('');
+
   const toggle = async () => {
-    const next = { ...userPrefs, notificationsEnabled: !userPrefs.notificationsEnabled };
+    const turningOn = !userPrefs.notificationsEnabled;
+    setPushStatus('');
+
+    if (turningOn) {
+      // iOS only supports web push once the app is added to the Home Screen.
+      // Guide them there first rather than let the permission request fail silently.
+      if (isIOS() && !isStandalone()) {
+        onShowIOSHelp();
+        return;
+      }
+      // POPIA: explicit opt-in. Ask browser permission + register device for push.
+      if (VAPID_KEY.startsWith('PASTE')) {
+        setPushStatus('Push is not configured yet — your preference was saved.');
+      } else if (!('Notification' in window)) {
+        setPushStatus('This browser does not support notifications.');
+        return;
+      } else {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') {
+            setPushStatus('Permission was declined — notifications stay off.');
+            return;
+          }
+          const messaging = getMessaging(app);
+          const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+          if (auth.currentUser && token) {
+            await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
+          }
+          setPushStatus('Notifications enabled on this device.');
+          if (onNotificationsEnabled) onNotificationsEnabled();
+        } catch (e) {
+          console.error(e);
+          setPushStatus('Could not enable push on this device — preference saved for email.');
+        }
+      }
+    } else {
+      setPushStatus('Notifications switched off.');
+      if (auth.currentUser) {
+        try {
+          await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: null }, { merge: true });
+        } catch (e) { console.error(e); }
+      }
+    }
+
+    const next = { ...userPrefs, notificationsEnabled: turningOn };
     setUserPrefs(next);
     if (auth.currentUser) {
       try {
-        await updateDoc(doc(db, 'users', auth.currentUser.uid), { preferences: next });
+        await setDoc(doc(db, 'users', auth.currentUser.uid), { preferences: next }, { merge: true });
       } catch (e) { console.error(e); }
     }
   };
@@ -464,13 +674,59 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout }) {
         border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden'
       }}>
         <div style={{
+          padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+          backgroundColor: '#faf8f4'
+        }}>
+          <p style={{
+            margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: 1.2,
+            textTransform: 'uppercase', color: 'var(--text-muted)'
+          }}>
+            Signed in as
+          </p>
+          <p style={{
+            margin: '4px 0 0', fontSize: 15.5, fontWeight: 600,
+            color: 'var(--text-primary)', wordBreak: 'break-all'
+          }}>
+            {auth.currentUser?.email || 'Unknown account'}
+          </p>
+        </div>
+
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)'
+        }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 600 }}>Daily verses</p>
+            <p style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
+              {subscribed ? 'Active — your archive grows daily' : 'Not receiving yet — always free'}
+            </p>
+          </div>
+          {subscribed ? (
+            <span style={{
+              fontSize: 13, fontWeight: 700, color: '#1e7e34',
+              backgroundColor: '#e6f3ea', borderRadius: 999, padding: '6px 14px'
+            }}>
+              Active
+            </span>
+          ) : (
+            <button onClick={onSubscribe} style={{
+              fontSize: 13.5, fontWeight: 700, color: '#fff',
+              backgroundColor: '#B8860B', border: 'none',
+              borderRadius: 999, padding: '9px 18px', cursor: 'pointer'
+            }}>
+              Receive Daily
+            </button>
+          )}
+        </div>
+
+        <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)'
         }}>
           <div>
             <p style={{ margin: 0, fontSize: 15.5, fontWeight: 600 }}>Daily notifications</p>
             <p style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
-              Receive the daily verse each morning
+              Off by default. Turn on to receive the daily verse — switch off anytime.
             </p>
           </div>
           <button onClick={toggle} aria-label="Toggle notifications" style={{
@@ -487,6 +743,25 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout }) {
             }} />
           </button>
         </div>
+
+        {pushStatus && (
+          <p style={{
+            margin: 0, padding: '12px 20px', fontSize: 13.5,
+            color: 'var(--text-secondary)', backgroundColor: '#faf8f4',
+            borderBottom: '1px solid rgba(0,0,0,0.06)'
+          }}>
+            {pushStatus}
+          </p>
+        )}
+
+        <button onClick={onOpenPrivacy} style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '18px 20px', background: 'transparent', border: 'none',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          cursor: 'pointer', fontSize: 15.5, fontWeight: 600, color: 'var(--text-primary)'
+        }}>
+          <BookOpen size={18} /> Privacy policy
+        </button>
 
         <button onClick={onLogout} style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
@@ -508,6 +783,198 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout }) {
   );
 }
 
+// ---------- iPhone: manual Add to Home Screen instructions ----------
+function IOSInstallHelpModal({ onDismiss }) {
+  const steps = [
+    { n: 1, text: 'Tap the Share icon', hint: 'the square with an arrow pointing up, in Safari\u2019s toolbar' },
+    { n: 2, text: 'Scroll down and tap "Add to Home Screen"' },
+    { n: 3, text: 'Tap "Add" in the top right' },
+    { n: 4, text: 'Open Daily Wisdom from your Home Screen, then turn notifications on again' }
+  ];
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+    }} onClick={onDismiss}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 460,
+        backgroundColor: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '28px 26px 34px',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.25)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{
+            width: 60, height: 60, margin: '0 auto 16px', borderRadius: 18,
+            backgroundColor: '#B8860B', display: 'flex',
+            alignItems: 'center', justifyContent: 'center'
+          }}>
+            <BookOpen size={28} color="#fff" />
+          </div>
+          <h3 style={{ margin: '0 0 8px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+            One quick step on iPhone
+          </h3>
+          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+            Apple requires iPhone apps to be added to your Home Screen before
+            they can send notifications. It takes a few seconds:
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 22 }}>
+          {steps.map(s => (
+            <div key={s.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <span style={{
+                flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                backgroundColor: '#faf3e3', color: '#B8860B',
+                fontSize: 13, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {s.n}
+              </span>
+              <div>
+                <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {s.text}
+                </p>
+                {s.hint && (
+                  <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+                    {s.hint}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onDismiss} style={{
+          width: '100%', padding: '14px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer'
+        }}>
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Add to Home Screen prompt (Android) ----------
+function InstallPromptModal({ onInstall, onDismiss }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+    }} onClick={onDismiss}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 460,
+        backgroundColor: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '28px 26px 34px', textAlign: 'center',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.25)'
+      }}>
+        <div style={{
+          width: 60, height: 60, margin: '0 auto 16px', borderRadius: 18,
+          backgroundColor: '#B8860B', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }}>
+          <BookOpen size={28} color="#fff" />
+        </div>
+        <h3 style={{ margin: '0 0 8px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+          Add Daily Wisdom to your home screen?
+        </h3>
+        <p style={{ margin: '0 0 22px', fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+          You're set to receive daily notifications. Add an icon to your home
+          screen for quick, one-tap access — just like any other app.
+        </p>
+        <button onClick={onInstall} style={{
+          width: '100%', padding: '14px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer', marginBottom: 10
+        }}>
+          Add to Home Screen
+        </button>
+        <button onClick={onDismiss} style={{
+          width: '100%', padding: '12px 0', background: 'transparent',
+          border: 'none', color: 'var(--text-muted)', fontSize: 14, fontWeight: 500, cursor: 'pointer'
+        }}>
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Privacy policy (POPIA) ----------
+function PrivacyView({ onBack }) {
+  const h = { fontSize: 16, fontWeight: 700, margin: '22px 0 8px', color: 'var(--text-primary)' };
+  const p = { fontSize: 14.5, lineHeight: 1.75, margin: '0 0 10px', color: 'var(--text-secondary)' };
+
+  return (
+    <div style={{ padding: '22px 20px 130px', maxWidth: 680, margin: '0 auto' }}>
+      <button onClick={onBack} style={{
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        color: '#B8860B', fontSize: 14.5, fontWeight: 600, padding: '4px 0', marginBottom: 10
+      }}>
+        ← Back
+      </button>
+
+      <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
+        Privacy policy
+      </h2>
+      <p style={{ ...p, fontSize: 13 }}>
+        Daily Wisdom from Jeremiah · Last updated July 2026
+      </p>
+
+      <h3 style={h}>Who we are</h3>
+      <p style={p}>
+        This app is operated by Inspired Living with Joao de Gois, based in South Africa.
+        We are the "responsible party" under the Protection of Personal Information Act
+        (POPIA). Questions or requests: contact us through our Facebook page,
+        Inspired Living with Joao de Gois.
+      </p>
+
+      <h3 style={h}>What we collect, and why</h3>
+      <p style={p}>
+        We collect only what the app needs to work: your email address (to create and
+        secure your account), your subscription status and date (to build your personal
+        verse archive), your notification preference, and — only if you switch
+        notifications on — a device token that lets us deliver the daily verse to your
+        device. We do not collect your name, location, contacts, or any special personal
+        information, and we never sell or share your information with anyone.
+      </p>
+
+      <h3 style={h}>Consent and notifications</h3>
+      <p style={p}>
+        Notifications are off by default. They are only sent if you actively switch them
+        on in Settings — this is your consent under POPIA. You can withdraw consent at
+        any time by switching the toggle off, and delivery stops immediately.
+      </p>
+
+      <h3 style={h}>Where your information is stored</h3>
+      <p style={p}>
+        Your information is stored securely on Google Firebase servers, protected by
+        industry-standard encryption. These servers may be located outside South Africa;
+        such transfers are permitted under section 72 of POPIA because Google provides
+        an adequate level of protection through binding corporate rules.
+      </p>
+
+      <h3 style={h}>Your rights</h3>
+      <p style={p}>
+        Under POPIA you may ask us at any time: what information we hold about you, to
+        correct it, or to delete your account and all associated information. We will
+        act on deletion requests within a reasonable time. You may also lodge a
+        complaint with the Information Regulator of South Africa
+        (inforegulator.org.za).
+      </p>
+
+      <h3 style={h}>Changes</h3>
+      <p style={p}>
+        If this policy changes, the updated version will appear here with a new date.
+        Continued use of the app after changes means you accept the updated policy.
+      </p>
+    </div>
+  );
+}
+
 // ---------- Auth ----------
 function AuthPage() {
   const [email, setEmail] = useState('');
@@ -515,6 +982,15 @@ function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
+  if (showPrivacy) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--surface-0)' }}>
+        <PrivacyView onBack={() => setShowPrivacy(false)} />
+      </div>
+    );
+  }
 
   const submit = async () => {
     setError('');
@@ -525,8 +1001,8 @@ function AuthPage() {
         await setDoc(doc(db, 'users', cred.user.uid), {
           email,
           createdAt: new Date(),
-          preferences: { notificationsEnabled: true },
-          subscribed: true,
+          preferences: { notificationsEnabled: false },
+          subscribed: false,
           isAdmin: false
         });
       } else {
@@ -623,6 +1099,13 @@ function AuthPage() {
           fontSize: 14.5, fontWeight: 600, cursor: 'pointer'
         }}>
           {isSignUp ? 'I already have an account' : 'New here? Create an account'}
+        </button>
+
+        <button onClick={() => setShowPrivacy(true)} style={{
+          width: '100%', marginTop: 14, background: 'transparent', border: 'none',
+          cursor: 'pointer', fontSize: 12.5, color: '#999', fontWeight: 500
+        }}>
+          Privacy policy
         </button>
       </div>
     </div>
