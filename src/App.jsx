@@ -14,14 +14,10 @@ import {
   getDocs,
   doc,
   getDoc,
-  setDoc,
-  updateDoc
+  setDoc
 } from 'firebase/firestore';
 import { getMessaging, getToken } from 'firebase/messaging';
-
-// Web Push key - get yours from: Firebase Console > Project Settings >
-// Cloud Messaging tab > Web Push certificates > Generate key pair
-const VAPID_KEY = 'BJP2Y8VeCpt1GoPFSlw4vjuMw0w8KtY2gsH3jGJB_7Af20xucm-bsmLcvLnvFJAmlpP_2OTlkasQOFbNRMrA01s';
+import { VAPID_KEY } from './pushConfig.js';
 
 // Capture Android's "Add to Home Screen" prompt the moment it's offered.
 // This must be attached before React even renders, or the event can be
@@ -36,6 +32,58 @@ const isStandalone = () =>
 const isIOS = () =>
   /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
   (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1); // iPadOS 13+
+
+// ---------- Shared push registration (single source of truth) ----------
+// Returns { ok, code, message }. Codes:
+//   ok | not-configured | unsupported | ios-needs-install | denied | blocked | error
+async function registerPushDevice() {
+  if (VAPID_KEY.startsWith('PASTE')) {
+    return { ok: false, code: 'not-configured', message: 'Push is not configured yet — your preference was saved.' };
+  }
+  if (!('Notification' in window)) {
+    return { ok: false, code: 'unsupported', message: 'This browser does not support notifications.' };
+  }
+  if (isIOS() && !isStandalone()) {
+    return { ok: false, code: 'ios-needs-install', message: '' };
+  }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      if (Notification.permission === 'denied') {
+        return { ok: false, code: 'blocked', message: 'Notifications are blocked for this site in your browser.' };
+      }
+      return { ok: false, code: 'denied', message: 'Permission was declined — notifications stay off.' };
+    }
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if (auth.currentUser && token) {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
+      return { ok: true, code: 'ok', message: 'Notifications enabled on this device.' };
+    }
+    return { ok: false, code: 'error', message: 'Could not register this device — please try again.' };
+  } catch (e) {
+    console.error('Push registration failed:', e);
+    return { ok: false, code: 'error', message: 'Could not enable push on this device.' };
+  }
+}
+
+// Silent repair: refresh/save the token WITHOUT prompting. Only possible when
+// the browser permission is already granted. Safe to call on every app load —
+// FCM tokens can rotate, so this also keeps healthy devices up to date.
+async function silentTokenRefresh() {
+  try {
+    if (VAPID_KEY.startsWith('PASTE')) return false;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+    if (isIOS() && !isStandalone()) return false;
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if (auth.currentUser && token) {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
+      return true;
+    }
+  } catch (e) { console.error('Silent token refresh failed:', e); }
+  return false;
+}
 
 // ---------- Firebase ----------
 const firebaseConfig = {
@@ -112,6 +160,8 @@ export default function DailyWisdomApp() {
   const [subscribedAt, setSubscribedAt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showIOSHelp, setShowIOSHelp] = useState(false);
+  const [showUnblockHelp, setShowUnblockHelp] = useState(false);
+  const [deviceRegistered, setDeviceRegistered] = useState(true); // assume ok until proven otherwise
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -121,9 +171,20 @@ export default function DailyWisdomApp() {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
-            setUserPrefs(data.preferences || { notificationsEnabled: false });
+            const prefs = data.preferences || { notificationsEnabled: false };
+            setUserPrefs(prefs);
             setSubscribed(data.subscribed === true);
             setSubscribedAt(data.subscribedAt || null);
+
+            // Self-healing: if notifications are ON, make sure this device is
+            // actually registered. Fixes accounts that opted in while push was
+            // misconfigured, and keeps rotating tokens fresh.
+            if (prefs.notificationsEnabled) {
+              const repaired = await silentTokenRefresh();
+              setDeviceRegistered(repaired || !!data.fcmToken);
+            } else {
+              setDeviceRegistered(true); // nothing expected, nothing broken
+            }
           }
         } catch (e) { /* non-critical */ }
         await loadVerses();
@@ -185,9 +246,20 @@ export default function DailyWisdomApp() {
         ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
         : <SubscribeView onSubscribe={handleSubscribe} />)}
       {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
-      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} />}
+      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} onShowUnblockHelp={() => setShowUnblockHelp(true)} onDeviceRegistered={(v) => setDeviceRegistered(v)} />}
       {page === 'privacy' && <PrivacyView onBack={() => setPage('settings')} />}
 
+      {/* Self-healing banner: notifications ON but this device isn't registered */}
+      {page === 'home' && userPrefs.notificationsEnabled && !deviceRegistered && (
+        <PushRepairBanner onTap={async () => {
+          const res = await registerPushDevice();
+          if (res.ok) { setDeviceRegistered(true); return; }
+          if (res.code === 'ios-needs-install') setShowIOSHelp(true);
+          else if (res.code === 'blocked') setShowUnblockHelp(true);
+        }} />
+      )}
+
+      {showUnblockHelp && <UnblockHelpModal onDismiss={() => setShowUnblockHelp(false)} />}
       {showIOSHelp && <IOSInstallHelpModal onDismiss={() => setShowIOSHelp(false)} />}
 
       {showInstallPrompt && (
@@ -606,7 +678,7 @@ function ArchiveView({ verses, subscribedAt }) {
 }
 
 // ---------- Settings ----------
-function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy, onNotificationsEnabled, onShowIOSHelp }) {
+function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy, onNotificationsEnabled, onShowIOSHelp, onShowUnblockHelp, onDeviceRegistered }) {
   const [pushStatus, setPushStatus] = useState('');
 
   const toggle = async () => {
@@ -614,39 +686,19 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
     setPushStatus('');
 
     if (turningOn) {
-      // iOS only supports web push once the app is added to the Home Screen.
-      // Guide them there first rather than let the permission request fail silently.
-      if (isIOS() && !isStandalone()) {
-        onShowIOSHelp();
-        return;
-      }
-      // POPIA: explicit opt-in. Ask browser permission + register device for push.
-      if (VAPID_KEY.startsWith('PASTE')) {
-        setPushStatus('Push is not configured yet — your preference was saved.');
-      } else if (!('Notification' in window)) {
-        setPushStatus('This browser does not support notifications.');
-        return;
-      } else {
-        try {
-          const perm = await Notification.requestPermission();
-          if (perm !== 'granted') {
-            setPushStatus('Permission was declined — notifications stay off.');
-            return;
-          }
-          const messaging = getMessaging(app);
-          const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-          if (auth.currentUser && token) {
-            await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
-          }
-          setPushStatus('Notifications enabled on this device.');
-          if (onNotificationsEnabled) onNotificationsEnabled();
-        } catch (e) {
-          console.error(e);
-          setPushStatus('Could not enable push on this device — preference saved for email.');
-        }
-      }
+      const res = await registerPushDevice();
+
+      if (res.code === 'ios-needs-install') { onShowIOSHelp(); return; }
+      if (res.code === 'blocked') { setPushStatus(res.message); onShowUnblockHelp(); return; }
+      if (res.code === 'denied' || res.code === 'unsupported') { setPushStatus(res.message); return; }
+
+      // ok, not-configured, or error: save the preference (POPIA opt-in recorded)
+      setPushStatus(res.message);
+      if (onDeviceRegistered) onDeviceRegistered(res.ok);
+      if (res.ok && onNotificationsEnabled) onNotificationsEnabled();
     } else {
       setPushStatus('Notifications switched off.');
+      if (onDeviceRegistered) onDeviceRegistered(true); // off = nothing expected
       if (auth.currentUser) {
         try {
           await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: null }, { merge: true });
@@ -779,6 +831,83 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
         Daily Wisdom from Jeremiah<br />
         Ancient words for modern resilience
       </p>
+    </div>
+  );
+}
+
+// ---------- Push repair banner + unblock help ----------
+function PushRepairBanner({ onTap }) {
+  return (
+    <button onClick={onTap} style={{
+      position: 'fixed', left: 12, right: 12, bottom: 92, zIndex: 60,
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '13px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
+      backgroundColor: '#B8860B', color: '#fff', textAlign: 'left',
+      boxShadow: '0 6px 24px rgba(0,0,0,0.25)'
+    }}>
+      <Sparkles size={20} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
+        Your daily notifications aren't active on this device yet — tap to finish setup
+      </span>
+    </button>
+  );
+}
+
+function UnblockHelpModal({ onDismiss }) {
+  const steps = [
+    { n: 1, text: 'Tap the lock icon 🔒 next to the web address at the top' },
+    { n: 2, text: 'Tap "Permissions"' },
+    { n: 3, text: 'Set "Notifications" to Allow (or tap Reset permissions)' },
+    { n: 4, text: 'Reload this page, then tap the setup banner again' }
+  ];
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+    }} onClick={onDismiss}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 460,
+        backgroundColor: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '28px 26px 34px',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.25)'
+      }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>
+          Notifications are blocked in your browser
+        </h3>
+        <p style={{ margin: '0 0 20px', fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)', textAlign: 'center' }}>
+          Your browser blocked notifications for this site earlier.
+          Here's how to allow them again:
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+          {steps.map(s => (
+            <div key={s.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <span style={{
+                flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                backgroundColor: '#faf3e3', color: '#B8860B',
+                fontSize: 13, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {s.n}
+              </span>
+              <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                {s.text}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p style={{ margin: '0 0 20px', fontSize: 13, lineHeight: 1.6, color: 'var(--text-muted)', textAlign: 'center' }}>
+          Still nothing? Also check your phone's Settings → Apps → your browser
+          → Notifications is switched on.
+        </p>
+        <button onClick={onDismiss} style={{
+          width: '100%', padding: '14px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer'
+        }}>
+          Got it
+        </button>
+      </div>
     </div>
   );
 }
