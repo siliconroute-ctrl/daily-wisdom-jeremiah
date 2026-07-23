@@ -23,6 +23,20 @@ import { getMessaging, getToken } from 'firebase/messaging';
 // Cloud Messaging tab > Web Push certificates > Generate key pair
 const VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
 
+// Capture Android's "Add to Home Screen" prompt the moment it's offered.
+// This must be attached before React even renders, or the event can be
+// missed entirely (the browser only fires it once per session).
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = () =>
+  /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+  (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1); // iPadOS 13+
+
 // ---------- Firebase ----------
 const firebaseConfig = {
   apiKey: "AIzaSyAbknRkscPA1kcXXKN0EXXLtVugryHOUvE",
@@ -96,6 +110,8 @@ export default function DailyWisdomApp() {
   const [userPrefs, setUserPrefs] = useState({ notificationsEnabled: true });
   const [subscribed, setSubscribed] = useState(false);
   const [subscribedAt, setSubscribedAt] = useState(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showIOSHelp, setShowIOSHelp] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -169,8 +185,24 @@ export default function DailyWisdomApp() {
         ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
         : <SubscribeView onSubscribe={handleSubscribe} />)}
       {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
-      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} />}
+      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} />}
       {page === 'privacy' && <PrivacyView onBack={() => setPage('settings')} />}
+
+      {showIOSHelp && <IOSInstallHelpModal onDismiss={() => setShowIOSHelp(false)} />}
+
+      {showInstallPrompt && (
+        <InstallPromptModal
+          onInstall={async () => {
+            setShowInstallPrompt(false);
+            if (deferredInstallPrompt) {
+              deferredInstallPrompt.prompt();
+              await deferredInstallPrompt.userChoice;
+              deferredInstallPrompt = null;
+            }
+          }}
+          onDismiss={() => setShowInstallPrompt(false)}
+        />
+      )}
 
       <BottomNav page={page} setPage={setPage} subscribed={subscribed} />
     </div>
@@ -574,7 +606,7 @@ function ArchiveView({ verses, subscribedAt }) {
 }
 
 // ---------- Settings ----------
-function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy }) {
+function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy, onNotificationsEnabled, onShowIOSHelp }) {
   const [pushStatus, setPushStatus] = useState('');
 
   const toggle = async () => {
@@ -582,6 +614,12 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
     setPushStatus('');
 
     if (turningOn) {
+      // iOS only supports web push once the app is added to the Home Screen.
+      // Guide them there first rather than let the permission request fail silently.
+      if (isIOS() && !isStandalone()) {
+        onShowIOSHelp();
+        return;
+      }
       // POPIA: explicit opt-in. Ask browser permission + register device for push.
       if (VAPID_KEY.startsWith('PASTE')) {
         setPushStatus('Push is not configured yet — your preference was saved.');
@@ -601,6 +639,7 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
             await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
           }
           setPushStatus('Notifications enabled on this device.');
+          if (onNotificationsEnabled) onNotificationsEnabled();
         } catch (e) {
           console.error(e);
           setPushStatus('Could not enable push on this device — preference saved for email.');
@@ -740,6 +779,126 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
         Daily Wisdom from Jeremiah<br />
         Ancient words for modern resilience
       </p>
+    </div>
+  );
+}
+
+// ---------- iPhone: manual Add to Home Screen instructions ----------
+function IOSInstallHelpModal({ onDismiss }) {
+  const steps = [
+    { n: 1, text: 'Tap the Share icon', hint: 'the square with an arrow pointing up, in Safari\u2019s toolbar' },
+    { n: 2, text: 'Scroll down and tap "Add to Home Screen"' },
+    { n: 3, text: 'Tap "Add" in the top right' },
+    { n: 4, text: 'Open Daily Wisdom from your Home Screen, then turn notifications on again' }
+  ];
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+    }} onClick={onDismiss}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 460,
+        backgroundColor: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '28px 26px 34px',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.25)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{
+            width: 60, height: 60, margin: '0 auto 16px', borderRadius: 18,
+            backgroundColor: '#B8860B', display: 'flex',
+            alignItems: 'center', justifyContent: 'center'
+          }}>
+            <BookOpen size={28} color="#fff" />
+          </div>
+          <h3 style={{ margin: '0 0 8px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+            One quick step on iPhone
+          </h3>
+          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+            Apple requires iPhone apps to be added to your Home Screen before
+            they can send notifications. It takes a few seconds:
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 22 }}>
+          {steps.map(s => (
+            <div key={s.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <span style={{
+                flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                backgroundColor: '#faf3e3', color: '#B8860B',
+                fontSize: 13, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {s.n}
+              </span>
+              <div>
+                <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {s.text}
+                </p>
+                {s.hint && (
+                  <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+                    {s.hint}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onDismiss} style={{
+          width: '100%', padding: '14px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer'
+        }}>
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Add to Home Screen prompt (Android) ----------
+function InstallPromptModal({ onInstall, onDismiss }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+    }} onClick={onDismiss}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 460,
+        backgroundColor: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '28px 26px 34px', textAlign: 'center',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.25)'
+      }}>
+        <div style={{
+          width: 60, height: 60, margin: '0 auto 16px', borderRadius: 18,
+          backgroundColor: '#B8860B', display: 'flex',
+          alignItems: 'center', justifyContent: 'center'
+        }}>
+          <BookOpen size={28} color="#fff" />
+        </div>
+        <h3 style={{ margin: '0 0 8px', fontSize: 19, fontWeight: 700, color: 'var(--text-primary)' }}>
+          Add Daily Wisdom to your home screen?
+        </h3>
+        <p style={{ margin: '0 0 22px', fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+          You're set to receive daily notifications. Add an icon to your home
+          screen for quick, one-tap access — just like any other app.
+        </p>
+        <button onClick={onInstall} style={{
+          width: '100%', padding: '14px 0',
+          backgroundColor: '#B8860B', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer', marginBottom: 10
+        }}>
+          Add to Home Screen
+        </button>
+        <button onClick={onDismiss} style={{
+          width: '100%', padding: '12px 0', background: 'transparent',
+          border: 'none', color: 'var(--text-muted)', fontSize: 14, fontWeight: 500, cursor: 'pointer'
+        }}>
+          Maybe later
+        </button>
+      </div>
     </div>
   );
 }
