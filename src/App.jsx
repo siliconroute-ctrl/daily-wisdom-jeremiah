@@ -21,7 +21,7 @@ import { getMessaging, getToken } from 'firebase/messaging';
 
 // Web Push key - get yours from: Firebase Console > Project Settings >
 // Cloud Messaging tab > Web Push certificates > Generate key pair
-const VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
+const VAPID_KEY = 'BJP2Y8VeCpt1GoPFSlw4vjuMw0w8KtY2gsH3jGJB_7Af20xucm-bsmLcvLnvFJAmlpP_2OTlkasQOFbNRMrA01s';
 
 // Capture Android's "Add to Home Screen" prompt the moment it's offered.
 // This must be attached before React even renders, or the event can be
