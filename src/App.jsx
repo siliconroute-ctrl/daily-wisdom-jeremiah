@@ -240,7 +240,7 @@ export default function DailyWisdomApp() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--surface-0)' }}>
       {page === 'home' && (todayVerse
-        ? <TodayView verse={todayVerse} onOpenSettings={() => setPage('settings')} />
+        ? <TodayView verse={todayVerse} onOpenSettings={() => setPage('settings')} showBanner={userPrefs.notificationsEnabled && !deviceRegistered} />
         : <EmptyState />)}
       {page === 'archive' && (subscribed
         ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
@@ -249,9 +249,14 @@ export default function DailyWisdomApp() {
       {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} onShowUnblockHelp={() => setShowUnblockHelp(true)} onDeviceRegistered={(v) => setDeviceRegistered(v)} />}
       {page === 'privacy' && <PrivacyView onBack={() => setPage('settings')} />}
 
-      {/* Self-healing banner: notifications ON but this device isn't registered */}
+      {/* Self-healing banner — sits at TOP so it never covers bottom nav or settings link */}
       {page === 'home' && userPrefs.notificationsEnabled && !deviceRegistered && (
         <PushRepairBanner onTap={async () => {
+          // iOS must install to Home Screen first — detect before attempting push
+          if (isIOS() && !isStandalone()) {
+            setShowIOSHelp(true);
+            return;
+          }
           const res = await registerPushDevice();
           if (res.ok) { setDeviceRegistered(true); return; }
           if (res.code === 'ios-needs-install') setShowIOSHelp(true);
@@ -321,7 +326,7 @@ function BottomNav({ page, setPage, subscribed }) {
 }
 
 // ---------- Today (hero image + overlay text) ----------
-function TodayView({ verse, onOpenSettings }) {
+function TodayView({ verse, onOpenSettings, showBanner }) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const heroImg = imageForVerse(verse);
@@ -347,7 +352,7 @@ function TodayView({ verse, onOpenSettings }) {
   };
 
   return (
-    <div style={{ paddingBottom: 110 }}>
+    <div style={{ paddingBottom: 110, paddingTop: showBanner ? 52 : 0 }}>
       {/* HERO */}
       <div style={{ position: 'relative', height: '72vh', minHeight: 520, overflow: 'hidden' }}>
         <img src={heroImg} alt="" style={{
@@ -468,14 +473,19 @@ function TodayView({ verse, onOpenSettings }) {
         </p>
       </section>
 
-      {/* Subtle settings link - intentionally low-key */}
-      <div style={{ textAlign: 'center', marginTop: 30 }}>
+      {/* Settings link — visible but not competing with verse content */}
+      <div style={{ textAlign: 'center', marginTop: 30, marginBottom: 8 }}>
         <button onClick={onOpenSettings} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: 'transparent', border: 'none', cursor: 'pointer',
-          color: 'var(--text-muted)', fontSize: 13, fontWeight: 500, padding: 8
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          background: 'transparent',
+          border: '1px solid var(--border-strong)',
+          borderRadius: 999,
+          cursor: 'pointer',
+          color: 'var(--text-secondary)',
+          fontSize: 14, fontWeight: 600,
+          padding: '8px 18px'
         }}>
-          <Settings size={15} /> Settings
+          <Settings size={16} /> Settings
         </button>
       </div>
     </div>
@@ -839,16 +849,18 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
 function PushRepairBanner({ onTap }) {
   return (
     <button onClick={onTap} style={{
-      position: 'fixed', left: 12, right: 12, bottom: 92, zIndex: 60,
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '13px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
-      backgroundColor: '#B8860B', color: '#fff', textAlign: 'left',
-      boxShadow: '0 6px 24px rgba(0,0,0,0.25)'
+      // TOP of screen — never overlaps bottom nav or settings link
+      position: 'fixed', left: 0, right: 0, top: 0, zIndex: 60,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+      padding: '14px 20px', border: 'none', cursor: 'pointer',
+      backgroundColor: '#B8860B', color: '#fff', textAlign: 'center',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
     }}>
-      <Sparkles size={20} style={{ flexShrink: 0 }} />
+      <Sparkles size={18} style={{ flexShrink: 0 }} />
       <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
-        Your daily notifications aren't active on this device yet — tap to finish setup
+        Notifications not active on this device — tap to finish setup
       </span>
+      <ChevronDown size={16} style={{ flexShrink: 0, transform: 'rotate(-90deg)' }} />
     </button>
   );
 }
