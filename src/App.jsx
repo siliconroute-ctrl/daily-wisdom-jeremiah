@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  deleteUser
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -14,7 +15,8 @@ import {
   getDocs,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { VAPID_KEY } from './pushConfig.js';
@@ -161,7 +163,8 @@ export default function DailyWisdomApp() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showIOSHelp, setShowIOSHelp] = useState(false);
   const [showUnblockHelp, setShowUnblockHelp] = useState(false);
-  const [deviceRegistered, setDeviceRegistered] = useState(true); // assume ok until proven otherwise
+  const [deviceRegistered, setDeviceRegistered] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // assume ok until proven otherwise
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -221,6 +224,24 @@ export default function DailyWisdomApp() {
     try { await signOut(auth); } catch (e) { console.error(e); }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      // Delete Firestore document first (all user data)
+      await deleteDoc(doc(db, 'users', user.uid));
+      // Delete Firebase Auth account
+      await deleteUser(user);
+      // Auth state change will automatically sign out and redirect to login
+    } catch (e) {
+      console.error('Delete account error:', e);
+      // If token expired, user needs to re-login before deletion
+      if (e.code === 'auth/requires-recent-login') {
+        alert('For security, please sign out and sign back in before deleting your account.');
+      }
+    }
+  };
+
   const handleSubscribe = async () => {
     const todayStr = new Date().toISOString().split('T')[0];
     setSubscribed(true);
@@ -246,8 +267,18 @@ export default function DailyWisdomApp() {
         ? <ArchiveView verses={verses} subscribedAt={subscribedAt} />
         : <SubscribeView onSubscribe={handleSubscribe} />)}
       {page === 'subscribe' && <SubscribeView onSubscribe={handleSubscribe} />}
-      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} onShowUnblockHelp={() => setShowUnblockHelp(true)} onDeviceRegistered={(v) => setDeviceRegistered(v)} />}
+      {page === 'settings' && <SettingsView userPrefs={userPrefs} setUserPrefs={setUserPrefs} onLogout={handleLogout} subscribed={subscribed} onSubscribe={handleSubscribe} onOpenPrivacy={() => setPage('privacy')} onNotificationsEnabled={() => { if (deferredInstallPrompt && !isStandalone()) setShowInstallPrompt(true); }} onShowIOSHelp={() => setShowIOSHelp(true)} onShowUnblockHelp={() => setShowUnblockHelp(true)} onDeviceRegistered={(v) => setDeviceRegistered(v)} onDeleteAccount={() => setShowDeleteConfirm(true)} />}
       {page === 'privacy' && <PrivacyView onBack={() => setPage('settings')} />}
+
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          onConfirm={async () => {
+            setShowDeleteConfirm(false);
+            await handleDeleteAccount();
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
 
       {/* Self-healing banner — sits at TOP so it never covers bottom nav or settings link */}
       {page === 'home' && userPrefs.notificationsEnabled && !deviceRegistered && (
@@ -688,7 +719,7 @@ function ArchiveView({ verses, subscribedAt }) {
 }
 
 // ---------- Settings ----------
-function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy, onNotificationsEnabled, onShowIOSHelp, onShowUnblockHelp, onDeviceRegistered }) {
+function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscribe, onOpenPrivacy, onNotificationsEnabled, onShowIOSHelp, onShowUnblockHelp, onDeviceRegistered, onDeleteAccount }) {
   const [pushStatus, setPushStatus] = useState('');
 
   const toggle = async () => {
@@ -828,11 +859,29 @@ function SettingsView({ userPrefs, setUserPrefs, onLogout, subscribed, onSubscri
         <button onClick={onLogout} style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
           padding: '18px 20px', background: 'transparent', border: 'none',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
           cursor: 'pointer', fontSize: 15.5, fontWeight: 600, color: '#c0392b'
         }}>
           <LogOut size={18} /> Sign out
         </button>
+
+        <button onClick={onDeleteAccount} style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '18px 20px', background: 'transparent', border: 'none',
+          cursor: 'pointer', fontSize: 14, fontWeight: 500,
+          color: 'var(--text-muted)'
+        }}>
+          🗑️ Delete my account and data
+        </button>
       </div>
+
+      <p style={{
+        textAlign: 'center', marginTop: 10, fontSize: 12,
+        color: 'var(--text-muted)', lineHeight: 1.5, padding: '0 20px'
+      }}>
+        Deleting your account permanently removes all your data.
+        This cannot be undone.
+      </p>
 
       <p style={{
         textAlign: 'center', marginTop: 26, fontSize: 13,
@@ -918,6 +967,60 @@ function UnblockHelpModal({ onDismiss }) {
           borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer'
         }}>
           Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Delete account confirmation modal ----------
+function DeleteConfirmModal({ onConfirm, onCancel }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+    }} onClick={onCancel}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 460,
+        backgroundColor: '#fff', borderRadius: '24px 24px 0 0',
+        padding: '28px 26px 34px',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.25)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
+          <h3 style={{
+            margin: '0 0 10px', fontSize: 19, fontWeight: 700,
+            color: '#c0392b'
+          }}>
+            Delete account permanently?
+          </h3>
+          <p style={{
+            margin: 0, fontSize: 14.5, lineHeight: 1.6,
+            color: 'var(--text-secondary)'
+          }}>
+            This will permanently delete your account and all associated data
+            including your archive, notification settings, and subscription.
+            <br /><br />
+            <strong>This action cannot be undone.</strong>
+          </p>
+        </div>
+
+        <button onClick={onConfirm} style={{
+          width: '100%', padding: '14px 0', marginBottom: 10,
+          backgroundColor: '#c0392b', color: '#fff', border: 'none',
+          borderRadius: 14, fontSize: 15.5, fontWeight: 700, cursor: 'pointer'
+        }}>
+          Yes, delete my account
+        </button>
+
+        <button onClick={onCancel} style={{
+          width: '100%', padding: '13px 0',
+          backgroundColor: 'transparent', color: 'var(--text-secondary)',
+          border: '1px solid var(--border)', borderRadius: 14,
+          fontSize: 15, fontWeight: 500, cursor: 'pointer'
+        }}>
+          Cancel — keep my account
         </button>
       </div>
     </div>
