@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.siliconroute.dailywisdom",
+    "sha256_cert_fingerprints": ["D4:17:39:78:0C:24:2B:79:C9:6A:68:3F:7E:62:77:0E:AB:BD:B9:25:4F:C3:BA:91:60:D8:1F:3A:C6:31:C9:00"]
+  }
+}]
