@@ -1377,15 +1377,37 @@ function EmptyState() {
 
 function LoadingScreen() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf8f4' }}>
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #3D1F00 0%, #B8860B 50%, #F5C842 100%)'
+    }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{
-          width: 60, height: 60, margin: '0 auto 16px', borderRadius: 18,
-          backgroundColor: '#B8860B', display: 'flex', alignItems: 'center', justifyContent: 'center'
+        <img
+          src="/icon-512.png"
+          alt="Daily Wisdom from Jeremiah"
+          style={{
+            width: 120, height: 120,
+            borderRadius: 28,
+            marginBottom: 20,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+          }}
+        />
+        <p style={{
+          color: 'rgba(255,255,255,0.9)',
+          fontSize: 15, margin: '0 0 6px',
+          fontFamily: "Georgia, serif",
+          fontWeight: 600,
+          letterSpacing: 0.3
         }}>
-          <BookOpen size={28} color="#fff" />
-        </div>
-        <p style={{ color: '#8a8a8a', fontSize: 14.5, margin: 0 }}>Loading Daily Wisdom…</p>
+          Daily Wisdom from Jeremiah
+        </p>
+        <p style={{
+          color: 'rgba(255,255,255,0.6)',
+          fontSize: 13, margin: 0
+        }}>
+          Loading…
+        </p>
       </div>
     </div>
   );
