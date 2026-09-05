@@ -202,19 +202,40 @@ export default function DailyWisdomApp() {
 
   const loadVerses = async () => {
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = 'dw_verses_cache';
+      const cacheDate = 'dw_verses_date';
+
+      // Step 1: Try cache first for instant load
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        const cachedDate = localStorage.getItem(cacheDate);
+        if (cached && cachedDate === today) {
+          const cachedVerses = JSON.parse(cached);
+          setVerses(cachedVerses);
+          const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+          const pick = cachedVerses.find(v => v.date === today) || cachedVerses[dayOfYear % cachedVerses.length];
+          setTodayVerse(pick || null);
+          return; // Cache is fresh — no Firebase needed
+        }
+      } catch (e) { /* cache miss — continue to Firebase */ }
+
+      // Step 2: Load from Firebase
       const snap = await getDocs(collection(db, 'verses'));
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       loaded.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
       setVerses(loaded);
 
-      const today = new Date().toISOString().split('T')[0];
-      // Pick today's verse, else rotate by day-of-year so it changes daily
-      let pick = loaded.find(v => v.date === today);
-      if (!pick && loaded.length) {
-        const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-        pick = loaded[dayOfYear % loaded.length];
-      }
+      const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+      const pick = loaded.find(v => v.date === today) || loaded[dayOfYear % loaded.length];
       setTodayVerse(pick || null);
+
+      // Step 3: Cache for next visit
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(loaded));
+        localStorage.setItem(cacheDate, today);
+      } catch (e) { /* storage full — skip cache */ }
+
     } catch (e) {
       console.error('Error loading verses:', e);
     }
@@ -360,6 +381,7 @@ function BottomNav({ page, setPage, subscribed }) {
 function TodayView({ verse, onOpenSettings, showBanner }) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const heroImg = imageForVerse(verse);
 
   const dateLabel = new Date().toLocaleDateString('en-GB', {
@@ -385,9 +407,15 @@ function TodayView({ verse, onOpenSettings, showBanner }) {
   return (
     <div style={{ paddingBottom: 110, paddingTop: showBanner ? 52 : 0 }}>
       {/* HERO */}
-      <div style={{ position: 'relative', height: '72vh', minHeight: 520, overflow: 'hidden' }}>
-        <img src={heroImg} alt="" style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
+      <div style={{
+        position: 'relative', height: '72vh', minHeight: 520, overflow: 'hidden',
+        backgroundColor: '#3D1F00' // warm dark placeholder while image loads
+      }}>
+        <img src={heroImg} alt="" onLoad={() => setImgLoaded(true)} style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover',
+          opacity: imgLoaded ? 1 : 0,
+          transition: 'opacity 0.4s ease'
         }} />
         {/* Strong gradient for text contrast */}
         <div style={{
